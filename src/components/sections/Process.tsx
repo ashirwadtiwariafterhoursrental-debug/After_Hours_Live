@@ -1,0 +1,72 @@
+import { motion } from "motion/react";
+import { CheckCircle2 } from "lucide-react";
+
+const steps = [
+  {
+    number: "01",
+    title: "Choose Your Arena",
+    description: "Select from our VIP personal packages or corporate activation bundles."
+  },
+  {
+    number: "02",
+    title: "Lock The Date",
+    description: "Our team confirms the logistics and ensures zero-disruption planning."
+  },
+  {
+    number: "03",
+    title: "We Build",
+    description: "We arrive, setup high-end tech, and manage the entire experience."
+  },
+  {
+    number: "04",
+    title: "Tear Down",
+    description: "Once the adrenaline settles, we vanish. No mess, no stress."
+  }
+];
+
+export function Process() {
+  return (
+    <section className="py-24 border-t border-white/5">
+      <div className="container mx-auto px-6">
+        <div className="text-center mb-20">
+          <h2 className="text-4xl md:text-6xl font-black uppercase italic mb-6">
+            The <span className="text-afterhours-purple">Process</span>
+          </h2>
+          <p className="text-white/50 max-w-xl mx-auto">
+            From booking to teardown, we handle every detail so you can focus on the game.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          {steps.map((step, index) => (
+            <motion.div
+              key={step.number}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="text-7xl font-black text-white/5 absolute -top-10 -left-4 select-none">
+                {step.number}
+              </div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-afterhours-purple/10 text-afterhours-purple rounded-full flex items-center justify-center mb-6">
+                  <CheckCircle2 size={24} />
+                </div>
+                <h3 className="text-xl font-bold uppercase italic mb-4">{step.title}</h3>
+                <p className="text-white/40 text-sm leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
+              
+              {index < steps.length - 1 && (
+                <div className="hidden md:block absolute top-6 left-full w-full h-[1px] bg-linear-to-r from-afterhours-purple/20 to-transparent -ml-6" />
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

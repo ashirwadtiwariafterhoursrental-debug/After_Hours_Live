@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Events & Experiences | After Hours</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --card-bg: #121212;
+            --neon-purple: #BC13FE;
+            --neon-green: #39FF14;
+            --text-main: #FFFFFF;
+            --text-muted: #A0A0A0;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 {
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            font-weight: 900;
+            font-style: italic;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=2070') center/cover no-repeat;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .hero-content {
+            max-width: 900px;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            line-height: 0.9;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 span {
+            color: var(--neon-purple);
+            text-shadow: 0 0 20px rgba(188, 19, 254, 0.5);
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 3vw, 1.25rem);
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 40px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            letter-spacing: 0.1em;
+            font-size: 0.875rem;
+        }
+
+        .btn-purple {
+            background-color: var(--neon-purple);
+            color: white;
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.3);
+        }
+
+        .btn-purple:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(188, 19, 254, 0.6);
+        }
+
+        /* How It Works */
+        .section {
+            padding: 100px 0;
+        }
+
+        .section-header {
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .section-header h2 span {
+            color: var(--neon-green);
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .step-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: border-color 0.3s ease;
+        }
+
+        .step-card:hover {
+            border-color: var(--neon-green);
+        }
+
+        .step-number {
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.05);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            line-height: 1;
+        }
+
+        .step-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            color: var(--neon-green);
+        }
+
+        /* Packages */
+        .category-title {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-title::after {
+            content: '';
+            height: 1px;
+            flex: 1;
+            background: var(--border-color);
+        }
+
+        .category-desc {
+            margin-bottom: 40px;
+            color: var(--text-muted);
+        }
+
+        .package-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+            margin-bottom: 80px;
+        }
+
+        .package-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .package-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .package-card.vip {
+            border: 2px solid var(--neon-purple);
+            box-shadow: inset 0 0 20px rgba(188, 19, 254, 0.1);
+        }
+
+        .package-card.vip::before {
+            content: 'PREMIUM CHOICE';
+            position: absolute;
+            top: 20px;
+            right: -35px;
+            background: var(--neon-purple);
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 900;
+            padding: 4px 40px;
+            transform: rotate(45deg);
+        }
+
+        .package-vibe {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: var(--neon-green);
+            margin-bottom: 12px;
+        }
+
+        .package-card.vip .package-vibe {
+            color: var(--neon-purple);
+        }
+
+        .package-name {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            line-height: 1.1;
+        }
+
+        .package-price {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 24px;
+            color: #fff;
+        }
+
+        .package-includes {
+            margin-bottom: 32px;
+            flex: 1;
+        }
+
+        .package-includes h4 {
+            font-size: 0.875rem;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+        }
+
+        .package-includes ul {
+            list-style: none;
+        }
+
+        .package-includes li {
+            font-size: 0.9375rem;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+            color: var(--text-muted);
+        }
+
+        .package-includes li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--neon-green);
+        }
+
+        .package-card.vip .package-includes li::before {
+            color: var(--neon-purple);
+        }
+
+        .package-duration {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Upsells */
+        .upsell-section {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 60px;
+            border-radius: 24px;
+            border: 1px dashed var(--border-color);
+        }
+
+        .upsell-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .upsell-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .upsell-info h5 {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .upsell-price {
+            color: var(--neon-green);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+
+        /* Trust Banner */
+        .trust-banner {
+            background: var(--neon-purple);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .trust-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            margin: 0 auto 24px;
+            border: 3px solid white;
+            overflow: hidden;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .quote {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-style: italic;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .quote-author {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+        }
+
+        /* FAQ */
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 32px;
+        }
+
+        .faq-item {
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .faq-item h4 {
+            color: var(--neon-green);
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .faq-item p {
+            color: var(--text-muted);
+            font-size: 0.9375rem;
+        }
+
+        /* CTA Form */
+        .cta-section {
+            background: linear-gradient(to bottom, var(--bg-color), #000);
+            padding-bottom: 120px;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 48px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--neon-purple);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            margin-top: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 3rem; }
+            .section-header h2 { font-size: 2.25rem; }
+            .package-grid { grid-template-columns: 1fr; }
+            .faq-grid { grid-template-columns: 1fr; }
+            .form-container { padding: 32px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content container">
+            <h1>Turn Your Home Into the <span>Ultimate Arena.</span></h1>
+            <p>Premium At-Home Gaming, Cinema, and VIP Birthday Experiences in Delhi NCR. We bring the tech, the lights, and the staff. You host the ultimate night.</p>
+            <a href="#booking" class="btn btn-purple">Request Your Experience</a>
+        </div>
+    </header>
+
+    <!-- How It Works -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works: <span>Zero Hassle</span></h2>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <span class="step-number">01</span>
+                    <h3>Choose Your Vibe.</h3>
+                    <p>Select the perfect package for your gathering, from casual weekend drop-offs to fully hosted VIP arenas.</p>
+                </div>
+                <div class="step-card">
+                    <span class="step-number">02</span>
+                    <h3>Secure Your Date.</h3>
+                    <p>Quick KYC or Corporate ID verification via WhatsApp. No lengthy paperwork, just fast confirmation.</p>
+                </div>
+                <div class="step-card">
+                    <span class="step-number">03</span>
+                    <h3>White-Glove Setup.</h3>
+                    <p>Our professional crew delivers, installs, and tests everything in your living room or backyard.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Packages -->
+    <section class="section" style="background: rgba(255,255,255,0.01);">
+        <div class="container">
+            <div class="section-header">
+                <h2>The <span>Packages</span></h2>
+            </div>
+
+            <!-- Category 1 -->
+            <div class="category-title">THE "DROP-OFF" HOUSE PARTY SERIES</div>
+            <p class="category-desc">Zero effort. Maximum fun for smaller gatherings. We drop it off Friday, pick it up Monday.</p>
+            
+            <div class="package-grid">
+                <!-- Card A -->
+                <div class="package-card">
+                    <div class="package-vibe">High-Stakes Multiplayer</div>
+                    <h3 class="package-name">The Living Room Arcade</h3>
+                    <div class="package-price">₹3,500 - ₹5,000 <span style="font-size: 0.8rem; opacity: 0.5;">/ weekend</span></div>
+                    <div class="package-includes">
+                        <h4>INCLUDES:</h4>
+                        <ul>
+                            <li>1x PS5 Console</li>
+                            <li>2x Wireless Controllers</li>
+                            <li>1 Premium Game of your choice</li>
+                            <li>100+ Games via PS Plus</li>
+                            <li>All HDMI/Power Cables</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card B -->
+                <div class="package-card">
+                    <div class="package-vibe">The Tech Upgrade</div>
+                    <h3 class="package-name">The Next-Gen Night In</h3>
+                    <div class="package-price">₹6,500 - ₹8,000 <span style="font-size: 0.8rem; opacity: 0.5;">/ weekend</span></div>
+                    <div class="package-includes">
+                        <h4>INCLUDES:</h4>
+                        <ul>
+                            <li>1x PS5 Console (2 Controllers)</li>
+                            <li>1x Meta Quest VR Headset</li>
+                            <li>Pre-loaded: Beat Saber, Superhot</li>
+                            <li>Full setup instructions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category 2 -->
+            <div class="category-title">THE VIP HOSTED ARENAS</div>
+            <p class="category-desc">For the most important personal celebrations. We bring the gear, the atmosphere, and the staff.</p>
+            
+            <div class="package-grid">
+                <!-- Card C -->
+                <div class="package-card vip">
+                    <div class="package-vibe">Futuristic Backyard Arcade</div>
+                    <h3 class="package-name">The Ultimate Birthday Bash</h3>
+                    <div class="package-price">₹12,000 - ₹15,000</div>
+                    <div class="package-includes">
+                        <h4>INCLUDES:</h4>
+                        <ul>
+                            <li>2x PS5 Stations</li>
+                            <li>1x VR Casting Station</li>
+                            <li>Ambient LED floor lighting</li>
+                            <li>1 Dedicated Game Master</li>
+                            <li>Tournament Management</li>
+                        </ul>
+                    </div>
+                    <div class="package-duration">DURATION: 3 to 4 Hours</div>
+                </div>
+
+                <!-- Card D -->
+                <div class="package-card vip">
+                    <div class="package-vibe">High Adrenaline Luxury</div>
+                    <h3 class="package-name">The VIP Grand Prix</h3>
+                    <div class="package-price">₹20,000 - ₹25,000+</div>
+                    <div class="package-includes">
+                        <h4>INCLUDES:</h4>
+                        <ul>
+                            <li>1x F1 Racing Simulator Setup</li>
+                            <li>(Steering wheel, pedals, seat)</li>
+                            <li>2x PS5 Stations</li>
+                            <li>2x VR Stations</li>
+                            <li>2 Dedicated Game Masters</li>
+                        </ul>
+                    </div>
+                    <div class="package-duration">DURATION: 4 Hours</div>
+                </div>
+            </div>
+
+            <!-- Category 3 -->
+            <div class="category-title">STADIUM & CINEMA SERIES</div>
+            <div class="package-grid" style="justify-content: center;">
+                <!-- Card E -->
+                <div class="package-card" style="max-width: 500px; margin: 0 auto;">
+                    <div class="package-vibe">Massive Screen Experience</div>
+                    <h3 class="package-name">Backyard Cinema & Lounge</h3>
+                    <div class="package-price">₹8,000 - ₹10,000</div>
+                    <div class="package-includes">
+                        <h4>INCLUDES:</h4>
+                        <ul>
+                            <li>100-inch HD Projector Setup</li>
+                            <li>Premium JBL Soundbar</li>
+                            <li>1x PS5 Station (Side setup)</li>
+                            <li>Full technical support</li>
+                        </ul>
+                    </div>
+                    <div class="package-duration">DURATION: 4 to 6 Hours</div>
+                </div>
+            </div>
+
+            <!-- Upsells -->
+            <div class="upsell-section">
+                <h3 style="margin-bottom: 32px; text-align: center;">THE VIP UPSELLS <span style="color: var(--neon-purple);">(ADD-ONS)</span></h3>
+                <div class="upsell-grid">
+                    <div class="upsell-item">
+                        <div class="upsell-info">
+                            <h5>Champion's Package</h5>
+                            <p style="font-size: 0.7rem; color: var(--text-muted);">Custom medals/trophy</p>
+                        </div>
+                        <div class="upsell-price">+₹1,000</div>
+                    </div>
+                    <div class="upsell-item">
+                        <div class="upsell-info">
+                            <h5>Big Screen Upgrade</h5>
+                            <p style="font-size: 0.7rem; color: var(--text-muted);">Swap TV for 100" Projector</p>
+                        </div>
+                        <div class="upsell-price">+₹2,500</div>
+                    </div>
+                    <div class="upsell-item">
+                        <div class="upsell-info">
+                            <h5>Extra Controllers</h5>
+                            <p style="font-size: 0.7rem; color: var(--text-muted);">Per additional unit</p>
+                        </div>
+                        <div class="upsell-price">+₹499</div>
+                    </div>
+                    <div class="upsell-item">
+                        <div class="upsell-info">
+                            <h5>Premium Games</h5>
+                            <p style="font-size: 0.7rem; color: var(--text-muted);">New release titles</p>
+                        </div>
+                        <div class="upsell-price">+₹199</div>
+                    </div>
+                    <div class="upsell-item">
+                        <div class="upsell-info">
+                            <h5>Meta Shots Bat</h5>
+                            <p style="font-size: 0.7rem; color: var(--text-muted);">VR Accessory</p>
+                        </div>
+                        <div class="upsell-price">+₹299</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Banner -->
+    <section class="trust-banner">
+        <div class="container trust-content">
+            <div class="avatar">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" alt="Shivani">
+            </div>
+            <h3 style="margin-bottom: 16px;">Trusted by the Best.</h3>
+            <p class="quote">"Major tech companies and community houses like Spring House trust After Hours for their zero-hassle event experiences."</p>
+            <p class="quote-author">— Shivani, Co-Founder</p>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Frequently Asked <span>Questions</span></h2>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>Is there a security deposit?</h4>
+                    <p>We offer a zero-deposit policy for verified corporate IDs. For personal bookings, a minimal refundable deposit may apply based on the equipment.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Do you stay at the party?</h4>
+                    <p>For our Drop-Off series, we leave you to the fun. For VIP Hosted Arenas, our Game Masters stay on-site to run the event seamlessly and handle all tech.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>What areas do you cover?</h4>
+                    <p>We proudly cover the entire Delhi NCR and Gurgaon region, including Noida and Faridabad.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Form -->
+    <section id="booking" class="cta-section">
+        <div class="container">
+            <div class="form-container">
+                <h2 style="text-align: center; margin-bottom: 8px;">Book Your Night</h2>
+                <p style="text-align: center; color: var(--text-muted); margin-bottom: 40px; font-size: 0.9rem;">Fill out the form below and our team will get back to you within 2 hours.</p>
+                
+                <form action="#">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" placeholder="+91 XXXXX XXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" placeholder="name@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Date</label>
+                        <input type="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Your Vibe</label>
+                        <select required>
+                            <option value="" disabled selected>Choose a package</option>
+                            <option value="arcade">The Living Room Arcade</option>
+                            <option value="night-in">The Next-Gen Night In</option>
+                            <option value="birthday">The Ultimate Birthday Bash</option>
+                            <option value="grand-prix">The VIP Grand Prix</option>
+                            <option value="cinema">Backyard Cinema & Lounge</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-purple submit-btn">Request Your Experience</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer style="padding: 40px 0; text-align: center; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem;">
+        <div class="container">
+            <p>&copy; 2026 After Hours Experiences. All Rights Reserved. Delhi NCR | Gurgaon</p>
+        </div>
+    </footer>
+
+</body>
+</html>
