@@ -39,6 +39,7 @@ export function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [paymentError, setPaymentError] = useState("");
 
   // Google Sheets integration form states
   const [sheetFullName, setSheetFullName] = useState("");
@@ -126,6 +127,7 @@ export function Checkout() {
     }
 
     setIsProcessing(true);
+    setPaymentError("");
     const amountToPay = calculatePaymentAmount();
 
     // Razorpay Integration Options
@@ -166,6 +168,7 @@ export function Checkout() {
       modal: {
         ondismiss: function() {
           setIsProcessing(false);
+          setPaymentError("Payment cancelled.");
         }
       }
     };
@@ -512,7 +515,12 @@ export function Checkout() {
                 </div>
 
                 {/* TASK 3: CALL TO ACTION & RAZORPAY MODAL ACCELERATOR */}
-                <div className="pt-6 border-t border-white/5">
+                <div className="pt-6 border-t border-white/5 space-y-4">
+                  {paymentError && (
+                    <div className="flex items-center gap-2 p-4 bg-red-950/40 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
+                      <AlertCircle size={16} /> {paymentError}
+                    </div>
+                  )}
                   <button
                     disabled={isProcessing}
                     onClick={handleRazorpayPayment}
@@ -557,15 +565,21 @@ export function Checkout() {
               <div className="absolute top-0 right-0 w-48 h-48 bg-afterhours-purple/10 blur-[90px] rounded-full pointer-events-none" />
 
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-afterhours-green/10 border border-afterhours-green/30 text-afterhours-green flex items-center justify-center mx-auto mb-4">
-                  <span className="text-lg font-bold">✓</span>
+                <div className="w-16 h-16 rounded-full bg-afterhours-green/10 border border-afterhours-green/30 text-afterhours-green flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                  <span className="text-2xl font-bold animate-pulse">✓</span>
                 </div>
-                <h2 className="text-2xl font-black uppercase italic tracking-tight mb-2 text-white">
-                  Payment <span className="text-afterhours-green">Authorized!</span>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight mb-1 text-white">
+                  Booking <span className="text-afterhours-green">Confirmed!</span>
                 </h2>
-                <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest bg-black/30 py-1.5 px-4 rounded-full inline-block">
-                  Log Booking Details to Secure Setup Location
+                <p className="text-afterhours-green text-[10px] uppercase font-extrabold tracking-widest bg-afterhours-green/10 border border-afterhours-green/20 py-1.5 px-4 rounded-full inline-block mb-3">
+                  Payment Successful
                 </p>
+                <div>
+                  <div className="text-xs font-mono text-white/50 bg-black/40 border border-white/5 py-2 px-4 rounded-xl inline-flex flex-col sm:flex-row items-center gap-2">
+                    <span className="uppercase text-[9px] font-bold text-white/30 tracking-widest">Receipt Number</span>
+                    <span className="text-afterhours-cyan font-bold font-mono">{paymentDetails?.paymentId || "N/A"}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Read-Only Auto-Populated Configuration Summary */}
@@ -689,6 +703,16 @@ export function Checkout() {
                   )}
                 </button>
               </form>
+
+              <div className="flex flex-col items-center border-t border-white/5 pt-4 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest">or skip register setup</span>
+                <a
+                  href="/index.html"
+                  className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded-full font-bold uppercase tracking-widest text-[11px] transition-all cursor-pointer hover:scale-[1.01] inline-block active:scale-98"
+                >
+                  Return to Home
+                </a>
+              </div>
             </motion.div>
           ) : (
             /* Ultimate Booking Completed Screen Overlay with sheets link */
@@ -749,12 +773,12 @@ export function Checkout() {
               </p>
 
               <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => navigate("/rentals")}
-                  className="bg-white/10 hover:bg-white/15 text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer"
+                <a
+                  href="/index.html"
+                  className="bg-white/10 hover:bg-white/15 text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer inline-flex items-center"
                 >
-                  Return to Storefront
-                </button>
+                  Return to Home
+                </a>
                 <a
                   href={`https://wa.me/919711844884?text=${encodeURIComponent(
                     `Hey After Hours! I just paid ₹${paymentDetails?.amountPaid} on your portal and logged the sheets register. Full Name: ${sheetFullName}. Dates: ${startDate} to ${endDate}. Trans ID: ${paymentDetails?.paymentId}`
