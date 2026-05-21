@@ -1,7 +1,9 @@
 import { motion, AnimatePresence } from "motion/react";
-import { Users, Building2, Package, ArrowRight, X, MessageSquare, Zap, Target, Trophy, Monitor, Gamepad2, Speaker } from "lucide-react";
-import { useState } from "react";
+import { Users, Building2, Package, ArrowRight, X, MessageSquare, Zap, Target, Trophy, Monitor, Gamepad2, Speaker, Sparkles, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+
+import { getCategoryInsight } from "../../services/gemini";
 
 const options = [
   {
@@ -120,8 +122,30 @@ const options = [
 
 export function QuickSelector() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [insight, setInsight] = useState<{ title: string; content: string } | null>(null);
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
 
   const selectedOption = options.find(opt => opt.id === selectedId);
+
+  useEffect(() => {
+    const fetchInsight = async (category: string) => {
+      setIsInsightLoading(true);
+      try {
+        const data = await getCategoryInsight(category);
+        setInsight(data);
+      } catch (error) {
+        console.error("Insight Error:", error);
+      } finally {
+        setIsInsightLoading(false);
+      }
+    };
+
+    if (selectedId) {
+      fetchInsight(selectedId);
+    } else {
+      setInsight(null);
+    }
+  }, [selectedId]);
 
   return (
     <section className="py-12 bg-afterhours-black border-y border-white/5">
@@ -209,6 +233,33 @@ export function QuickSelector() {
                     selectedOption.modalContent
                   )}
                 </div>
+
+                <AnimatePresence>
+                  {(isInsightLoading || insight) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="mb-12 p-6 bg-afterhours-purple/10 border border-afterhours-purple/20 rounded-2xl flex items-start gap-4"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-afterhours-purple/20 flex items-center justify-center text-afterhours-purple shrink-0">
+                        <Sparkles size={20} />
+                      </div>
+                      <div className="flex-1">
+                        {isInsightLoading ? (
+                          <div className="flex items-center gap-2 text-afterhours-purple text-xs font-bold uppercase tracking-widest">
+                            <Loader2 size={12} className="animate-spin" /> Analyzing Trends...
+                          </div>
+                        ) : insight ? (
+                          <>
+                            <h5 className="text-afterhours-purple text-[10px] font-bold uppercase tracking-widest mb-1">{insight.title}</h5>
+                            <p className="text-white/80 text-sm italic">"{insight.content}"</p>
+                          </>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/5">
                   <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">

@@ -5,6 +5,9 @@ import {
   Tag, X, Plus, Minus
 } from "lucide-react";
 import { useState, useMemo, useEffect, FormEvent, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import { GearAssistant } from "@/src/components/sections/GearAssistant";
+import { fixedPriceCodes } from "../lib/fixedPriceCodes";
 
 // --- Types ---
 interface RentalItem {
@@ -121,7 +124,7 @@ const getLevenshteinDistance = (s1: string, s2: string): number => {
 };
 
 const findClosestCode = (input: string): string | null => {
-  const codes = Object.keys(PROMO_CODES);
+  const codes = [...Object.keys(PROMO_CODES), ...Object.keys(fixedPriceCodes)];
   let minDistance = Infinity;
   let closest = null;
 
@@ -167,6 +170,7 @@ const calculateItemPriceForDates = (basePrice: number, startDate: string, endDat
 };
 
 export function Rentals() {
+  const navigate = useNavigate();
   // --- State ---
   const [cart, setCart] = useState<CartItem[]>([]);
   const [startDate, setStartDate] = useState("");
@@ -181,6 +185,15 @@ export function Rentals() {
   });
 
   // --- Calculations ---
+  const activeOverrideCode = useMemo(() => {
+    return activeCodes.find(code => code in fixedPriceCodes) || null;
+  }, [activeCodes]);
+
+  const overrideAmount = useMemo(() => {
+    if (!activeOverrideCode) return null;
+    return fixedPriceCodes[activeOverrideCode];
+  }, [activeOverrideCode]);
+
   const subtotal = useMemo(() => {
     return cart.reduce((acc, item) => {
       const itemTotalPrice = calculateItemPriceForDates(item.price, startDate, endDate);
@@ -190,7 +203,12 @@ export function Rentals() {
 
   const deliveryFee = activeCodes.includes("FREEDELIVERY") ? 0 : 199;
 
+  const originalTotal = subtotal + deliveryFee;
+
   const discount = useMemo(() => {
+    if (activeOverrideCode && overrideAmount !== null) {
+      return Math.max(0, originalTotal - overrideAmount);
+    }
     let totalDiscount = 0;
     activeCodes.forEach(code => {
       const promo = PROMO_CODES[code];
@@ -203,13 +221,19 @@ export function Rentals() {
       }
     });
     return totalDiscount;
-  }, [activeCodes, subtotal]);
+  }, [activeCodes, subtotal, activeOverrideCode, overrideAmount, originalTotal]);
 
-  const finalTotal = Math.max(0, subtotal + deliveryFee - discount);
+  const finalTotal = useMemo(() => {
+    if (activeOverrideCode && overrideAmount !== null) {
+      return overrideAmount;
+    }
+    return Math.max(0, originalTotal - discount);
+  }, [originalTotal, discount, activeOverrideCode, overrideAmount]);
 
   // --- Effects ---
   useEffect(() => {
     const validCodes = activeCodes.filter(code => {
+      if (code in fixedPriceCodes) return true;
       const promo = PROMO_CODES[code];
       if (promo && promo.minSubtotal && subtotal <= promo.minSubtotal) return false;
       return true;
@@ -245,6 +269,29 @@ export function Rentals() {
     const code = promoInput.toUpperCase().trim();
     if (!code) return;
 
+    // Check if it's in fixed price Codes
+    const overrideVal = fixedPriceCodes[code];
+
+    if (overrideVal !== undefined) {
+      const currentOriginalTotal = subtotal + deliveryFee;
+      if (overrideVal > currentOriginalTotal) {
+        setPromoError("Code not applicable for this cart value");
+        return;
+      }
+      if (activeCodes.includes(code)) {
+        setPromoError("Code already applied.");
+        return;
+      }
+      setPromoError("");
+      // Replace other discount/override codes with the new override code
+      setActiveCodes(prev => [
+        ...prev.filter(c => !(c in fixedPriceCodes) && c === "FREEDELIVERY"),
+        code
+      ]);
+      setPromoInput("");
+      return;
+    }
+
     const promo = PROMO_CODES[code];
 
     if (!promo) {
@@ -252,7 +299,7 @@ export function Rentals() {
       if (closest) {
         setPromoError(`Spelling mistake. Did you mean: ${closest}?`);
       } else {
-        setPromoError("Invalid discount code.");
+        setPromoError("Invalid VIP Code.");
       }
       return;
     }
@@ -269,9 +316,12 @@ export function Rentals() {
 
     setPromoError("");
     if (promo.type === 'delivery') {
-      setActiveCodes(prev => [...prev.filter(c => PROMO_CODES[c].type !== 'delivery'), code]);
+      setActiveCodes(prev => [...prev.filter(c => PROMO_CODES[c]?.type !== 'delivery'), code]);
     } else {
-      setActiveCodes(prev => [...prev.filter(c => PROMO_CODES[c].type !== 'discount'), code]);
+      setActiveCodes(prev => [
+        ...prev.filter(c => !(c in fixedPriceCodes) && PROMO_CODES[c]?.type !== 'discount'),
+        code
+      ]);
     }
     
     setPromoInput("");
@@ -281,31 +331,43 @@ export function Rentals() {
     setActiveCodes(prev => prev.filter(c => c !== code));
   };
 
-  const handleWhatsAppRedirect = () => {
+  const handleCheckoutRedirect = () => {
     if (cart.length === 0 || !startDate || !endDate) {
       alert("Please select gear and rental dates first.");
       return;
     }
 
-    const WHATSAPP_NUMBER = "919711844884"; // Updated WhatsApp number
-    const itemsList = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
-    const codes = activeCodes.length > 0 ? activeCodes.join(", ") : "None";
-    
-    const message = `Hi After Hours! I'd like to request a quote for the following:
-*Items:* ${itemsList}
-*Dates:* ${startDate} to ${endDate}
-*Promo Code:* ${codes}
-*Final Amount:* ₹${finalTotal}
-${formData.name ? `*Name:* ${formData.name}` : ""}
-${formData.phone ? `*Phone:* ${formData.phone}` : ""}`;
+    const checkoutData = {
+      cart: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        calculatedPrice: calculateItemPriceForDates(item.price, startDate, endDate),
+        quantity: item.quantity,
+        category: item.category
+      })),
+      startDate,
+      endDate,
+      activeCodes,
+      subtotal,
+      deliveryFee,
+      discount,
+      finalTotal,
+      name: formData.name,
+      phone: formData.phone
+    };
 
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
+    localStorage.setItem("afterhours_checkout_data", JSON.stringify(checkoutData));
+    navigate("/checkout");
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    handleWhatsAppRedirect();
+    if (!formData.name || !formData.phone) {
+      alert("Please fill in both Name and Phone to customize your secure checkout configuration!");
+      return;
+    }
+    handleCheckoutRedirect();
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -333,6 +395,13 @@ ${formData.phone ? `*Phone:* ${formData.phone}` : ""}`;
             Premium tech delivered and installed. Choose a custom combo or rent individual gear for your next night in.
           </motion.p>
         </div>
+
+        <GearAssistant onAddItems={(itemIds) => {
+          itemIds.forEach(id => {
+            const item = RENTAL_ITEMS.find(i => i.id === id);
+            if (item) addToCart(item);
+          });
+        }} />
 
         {/* Featured Combos */}
         <section className="mb-32">
@@ -651,8 +720,8 @@ ${formData.phone ? `*Phone:* ${formData.phone}` : ""}`;
                   <span>₹{deliveryFee}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-afterhours-cyan">
-                    <span>Discount</span>
+                  <div className="flex justify-between text-afterhours-cyan font-bold">
+                    <span>{activeOverrideCode ? "VIP Discount Applied" : "Discount"}</span>
                     <span>-₹{discount}</span>
                   </div>
                 )}
@@ -663,10 +732,10 @@ ${formData.phone ? `*Phone:* ${formData.phone}` : ""}`;
               </div>
               <button 
                 disabled={cart.length === 0 || !startDate || !endDate}
-                onClick={handleWhatsAppRedirect}
+                onClick={handleCheckoutRedirect}
                 className="w-full py-5 rounded-2xl bg-linear-to-r from-afterhours-purple to-afterhours-cyan text-black font-black uppercase tracking-[0.2em] text-sm disabled:opacity-50 disabled:grayscale transition-all hover:scale-[1.02] active:scale-95 shadow-2xl"
               >
-                Request Gear
+                Proceed to Checkout
               </button>
             </div>
           </motion.div>

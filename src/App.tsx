@@ -8,6 +8,7 @@ import { Experiences } from "./pages/Experiences";
 import { Corporate } from "./pages/Corporate";
 import { Rentals } from "./pages/Rentals";
 import { Contact } from "./pages/Contact";
+import { Checkout } from "./pages/Checkout";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/corporate" element={<Corporate />} />
           <Route path="/rentals" element={<Rentals />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/checkout" element={<Checkout />} />
         </Routes>
         <Footer />
       </div>

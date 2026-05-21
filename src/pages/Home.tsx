@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Hero } from "@/src/components/sections/Hero";
 import { QuickSelector } from "@/src/components/sections/QuickSelector";
+import { AIPlanner } from "@/src/components/sections/AIPlanner";
 import { Process } from "@/src/components/sections/Process";
 import { Gallery } from "@/src/components/sections/Gallery";
 import { Link } from "react-router-dom";
@@ -11,6 +12,7 @@ export function Home() {
     <main>
       <Hero />
       <QuickSelector />
+      <AIPlanner />
       <Process />
       <Gallery />
 

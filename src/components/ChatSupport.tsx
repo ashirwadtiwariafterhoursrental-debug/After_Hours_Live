@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, X, Send, Loader2, Phone } from "lucide-react";
 
+import { getConciergeResponse } from "../services/gemini";
+
 export function ChatSupport() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: "user" | "model"; text: string }[]>([
@@ -28,36 +30,16 @@ export function ChatSupport() {
     setIsLoading(true);
 
     try {
-      // Call the Netlify Serverless Function backend
-      const response = await fetch("/.netlify/functions/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMessage,
-          history: messages.map(m => ({
-            role: m.role,
-            parts: [{ text: m.text }]
-          }))
-        })
-      });
+      const history = messages.map(m => ({
+        role: m.role,
+        parts: [{ text: m.text }]
+      }));
 
-      if (!response.ok) {
-        throw new Error("Failed to get response from concierge");
-      }
-
-      const data = await response.json();
-      const responseText = data.text;
+      const data = await getConciergeResponse(userMessage, history);
+      const { text: responseText, quickReplies: newQuickReplies } = data;
       
       setMessages(prev => [...prev, { role: "model", text: responseText }]);
-      
-      // Dynamic quick replies based on context
-      if (responseText.toLowerCase().includes("party") || responseText.toLowerCase().includes("planning")) {
-        setQuickReplies(["Games Night", "Movie Night", "Music & Fun"]);
-      } else if (responseText.toLowerCase().includes("troubleshoot")) {
-        setQuickReplies(["PS5 Power", "Controller Sync", "VR Blurry"]);
-      } else {
-        setQuickReplies(["View Packages", "Promo Codes", "WhatsApp Us"]);
-      }
+      setQuickReplies(newQuickReplies || []);
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages(prev => [...prev, { 
