@@ -1,5 +1,7 @@
 {
   "name": "After Hours | Premium Gaming Assets on Rent & Corporate Events",
   "description": "Premium gaming assets on rent in Delhi NCR. We specialize in events for birthday parties, house parties, and high-end corporate events with PS5, VR, and F1 Simulators.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, ShieldCheck, CreditCard, Sparkles, Check, 
-  Clock, HelpCircle, AlertCircle, ShoppingCart, Calendar, Tag, CheckCircle2 
+  Clock, HelpCircle, AlertCircle, ShoppingCart, Calendar, Tag, CheckCircle2,
+  MapPin, Navigation
 } from "lucide-react";
 import { fixedPriceCodes } from "../lib/fixedPriceCodes";
-import { googleSignIn, writeToGoogleSheets, getCachedToken } from "../lib/sheetsAuth";
 
 interface CheckoutItem {
   id: string;
@@ -41,18 +41,15 @@ export function Checkout() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [paymentError, setPaymentError] = useState("");
 
-  // Google Sheets integration form states
-  const [sheetFullName, setSheetFullName] = useState("");
-  const [sheetEmail, setSheetEmail] = useState("");
-  const [sheetOfficialEmail, setSheetOfficialEmail] = useState("");
-  const [sheetWhatsApp, setSheetWhatsApp] = useState("");
-  const [sheetLocationLink, setSheetLocationLink] = useState("");
-  const [sheetsError, setSheetsError] = useState("");
-  const [sheetsSynced, setSheetsSynced] = useState(false);
-  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
-  const [googleUser, setGoogleUser] = useState<any>(null);
-  const [googleToken, setGoogleToken] = useState<string | null>(null);
-  const [spreadsheetLink, setSpreadsheetLink] = useState("");
+  // Delivery details collection states (logs to dispatch register on server)
+  const [deliveryName, setDeliveryName] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [deliveryEmail, setDeliveryEmail] = useState("");
+  const [deliveryLocation, setDeliveryLocation] = useState("");
+  const [deliveryError, setDeliveryError] = useState("");
+  const [deliverySynced, setDeliverySynced] = useState(false);
+  const [isSyncingDelivery, setIsSyncingDelivery] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   // Load checkout data from localStorage
   useEffect(() => {
@@ -67,8 +64,8 @@ export function Checkout() {
       setCheckoutData(parsed);
       
       // Auto-populate form details from previous step
-      if (parsed.name) setSheetFullName(parsed.name);
-      if (parsed.phone) setSheetWhatsApp(parsed.phone);
+      if (parsed.name) setDeliveryName(parsed.name);
+      if (parsed.phone) setDeliveryPhone(parsed.phone);
     } catch (e) {
       console.error("Error parsing checkout data:", e);
       navigate("/rentals");
@@ -183,70 +180,100 @@ export function Checkout() {
     }
   };
 
-  const handleSheetsSubmission = async (e: FormEvent) => {
-    e.preventDefault();
-    setSheetsError("");
-    if (!sheetFullName.trim()) {
-      setSheetsError("Full Name is required.");
-      return;
-    }
-    if (!sheetEmail.trim()) {
-      setSheetsError("Email Address is required.");
-      return;
-    }
-    if (!sheetWhatsApp.trim()) {
-      setSheetsError("WhatsApp Number is required.");
-      return;
-    }
-    if (!sheetLocationLink.trim()) {
-      setSheetsError("Delivery Location Link is required.");
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setDeliveryError("Geolocation is not supported by your browser. Please paste a link manually.");
       return;
     }
 
-    setIsSyncingSheets(true);
-    try {
-      let token = googleToken || getCachedToken();
+    setIsDetectingLocation(true);
+    setDeliveryError("");
 
-      if (!token) {
-        console.log("No token cached, prompting Google Sign In...");
-        const result = await googleSignIn();
-        if (result) {
-          token = result.accessToken;
-          setGoogleUser(result.user);
-          setGoogleToken(result.accessToken);
-          // Auto fill email if currently blank
-          if (!sheetEmail && result.user.email) {
-            setSheetEmail(result.user.email);
-          }
-        } else {
-          throw new Error("Could not acquire Google access token. Please try signing in again.");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        setDeliveryLocation(mapsLink);
+        setIsDetectingLocation(false);
+      },
+      (error) => {
+        setIsDetectingLocation(false);
+        console.error("Geolocation error:", error);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setDeliveryError("Location access denied. Please allow location permissions or paste a Google Maps link manually.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setDeliveryError("Local position unavailable. Please paste a Google Maps link manually.");
+            break;
+          case error.TIMEOUT:
+            setDeliveryError("Location detection request timed out. Please paste a Google Maps link manually.");
+            break;
+          default:
+            setDeliveryError("Could not capture automatically. Please paste a Google Maps link manually.");
+            break;
         }
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
+  const handleDeliverySubmission = async (e: FormEvent) => {
+    e.preventDefault();
+    setDeliveryError("");
+    if (!deliveryName.trim()) {
+      setDeliveryError("Full Name is required.");
+      return;
+    }
+    if (!deliveryPhone.trim()) {
+      setDeliveryError("WhatsApp Number is required.");
+      return;
+    }
+    if (!deliveryEmail.trim()) {
+      setDeliveryError("Email address is required.");
+      return;
+    }
+    if (!deliveryLocation.trim()) {
+      setDeliveryError("Delivery Location Google Maps Link is required.");
+      return;
+    }
+
+    setIsSyncingDelivery(true);
+    try {
       const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
       const durationStr = `${startDate} to ${endDate} (${getDaysCount()} days)`;
-      const finalPriceStr = `₹${calculatePaymentAmount()} (${paymentOption === "reserve" ? "₹500 Deposit" : "Paid In Full"})`;
-      const discountStr = `₹${discount}`;
+      const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
+      const discountStr = `₹${discount || 0}`;
 
-      const { spreadsheetUrl } = await writeToGoogleSheets(token!, {
-        fullName: sheetFullName,
-        email: sheetEmail,
-        officialEmail: sheetOfficialEmail,
-        whatsappNumber: sheetWhatsApp,
-        locationLink: sheetLocationLink,
-        bookingItems: bookingItemsStr,
-        duration: durationStr,
-        finalPrice: finalPriceStr,
-        discount: discountStr,
+      const res = await fetch("/api/submit-delivery", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transactionId: paymentDetails?.paymentId || "N/A",
+          totalPaid: totalPaidStr,
+          discount: discountStr,
+          assetsRented: bookingItemsStr,
+          dates: durationStr,
+          name: deliveryName,
+          phone: deliveryPhone,
+          email: deliveryEmail,
+          location: deliveryLocation,
+        })
       });
 
-      setSpreadsheetLink(spreadsheetUrl);
-      setSheetsSynced(true);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Server failed to record delivery details. Please retry.");
+      }
+
+      setDeliverySynced(true);
     } catch (err: any) {
-      console.error("Sheets submission error:", err);
-      setSheetsError(err.message || "Failed to sync to Google Sheets. Please confirm authorization and try again.");
+      console.error("Delivery submission error:", err);
+      setDeliveryError(err.message || "Failed to submit delivery details. Please confirm inputs and try again.");
     } finally {
-      setIsSyncingSheets(false);
+      setIsSyncingDelivery(false);
     }
   };
 
@@ -553,10 +580,10 @@ export function Checkout() {
               </div>
 
             </motion.div>
-          ) : !sheetsSynced ? (
-            /* Google Sheets Sync Registration Form */
+          ) : !deliverySynced ? (
+            /* Smooth delivery details registration form */
             <motion.div
-              key="google-sheets-form"
+              key="delivery-registration-form"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -569,137 +596,147 @@ export function Checkout() {
                   <span className="text-2xl font-bold animate-pulse">✓</span>
                 </div>
                 <h2 className="text-3xl font-black uppercase italic tracking-tight mb-1 text-white">
-                  Booking <span className="text-afterhours-green">Confirmed!</span>
+                  Payment <span className="text-afterhours-green">Authorized!</span>
                 </h2>
-                <p className="text-afterhours-green text-[10px] uppercase font-extrabold tracking-widest bg-afterhours-green/10 border border-afterhours-green/20 py-1.5 px-4 rounded-full inline-block mb-3">
-                  Payment Successful
+                <p className="text-[10px] text-afterhours-green uppercase font-bold tracking-widest bg-afterhours-green/10 border border-afterhours-green/20 py-1.5 px-4 rounded-full inline-block mb-3">
+                  Verification Complete
                 </p>
-                <div>
-                  <div className="text-xs font-mono text-white/50 bg-black/40 border border-white/5 py-2 px-4 rounded-xl inline-flex flex-col sm:flex-row items-center gap-2">
-                    <span className="uppercase text-[9px] font-bold text-white/30 tracking-widest">Receipt Number</span>
-                    <span className="text-afterhours-cyan font-bold font-mono">{paymentDetails?.paymentId || "N/A"}</span>
-                  </div>
-                </div>
+                <p className="text-white/60 text-xs max-w-md mx-auto leading-relaxed">
+                  Share remaining details for smooth delivery. Our dispatch team will use these coordinates to lock in your setup location.
+                </p>
               </div>
 
-              {/* Read-Only Auto-Populated Configuration Summary */}
-              <div className="bg-black/40 border border-white/5 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest block mb-1">Auto-Selected Gear</span>
-                  <span className="text-white font-bold break-words">
-                    {cart.map(item => `${item.name} (x${item.quantity})`).join(", ")}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest block mb-1">Rental Duration</span>
-                  <span className="text-white font-bold">
-                    {startDate} to {endDate} ({getDaysCount()} Days)
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest block mb-1">Final Cost Paid</span>
-                  <span className="text-afterhours-cyan font-bold">
-                    ₹{paymentDetails?.amountPaid} ({paymentDetails?.paymentMode === "reserve" ? "₹500 Deposit" : "Full"})
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest block mb-1">Discount Applied</span>
-                  <span className="text-afterhours-green font-bold">
-                    ₹{discount || 0} Saved
-                  </span>
+              {/* Already Filled - Read-Only Auto-Populated Configuration Summary */}
+              <div>
+                <span className="text-[10px] uppercase font-bold text-white/40 tracking-widest block mb-1 font-mono">
+                  Already Filled (From Order Summary)
+                </span>
+                <div className="bg-black/45 border border-white/5 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Transaction ID</span>
+                    <span className="text-afterhours-cyan font-bold break-all">
+                      {paymentDetails?.paymentId || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Total Paid Funds</span>
+                    <span className="text-white font-bold">
+                      ₹{paymentDetails?.amountPaid || calculatePaymentAmount()} ({paymentOption === "reserve" ? "₹500 Deposit" : "Full"})
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Discount Applied</span>
+                    <span className="text-afterhours-green font-bold">
+                      ₹{discount || 0} Saved
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Asset Rented Out</span>
+                    <span className="text-white font-bold break-words">
+                      {cart.map(item => `${item.name} (x${item.quantity})`).join(", ")}
+                    </span>
+                  </div>
+                  <div className="md:col-span-2 border-t border-white/5 pt-2">
+                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">From and To Dates</span>
+                    <span className="text-white font-bold">
+                      {startDate} to {endDate} ({getDaysCount()} Days)
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Form Input Block */}
-              <form onSubmit={handleSheetsSubmission} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {/* Full Name */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={sheetFullName}
-                      onChange={(e) => setSheetFullName(e.target.value)}
-                      placeholder="e.g. John Doe"
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
-                    />
-                  </div>
+              <form onSubmit={handleDeliverySubmission} className="space-y-6">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-afterhours-purple tracking-widest block mb-3 font-mono">
+                    Please Complete Required Fields
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Full Name */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={deliveryName}
+                        onChange={(e) => setDeliveryName(e.target.value)}
+                        placeholder="e.g. John Doe"
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                      />
+                    </div>
 
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Personal Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={sheetEmail}
-                      onChange={(e) => setSheetEmail(e.target.value)}
-                      placeholder="e.g. john@example.com"
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
-                    />
-                  </div>
+                    {/* WhatsApp Number */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">WhatsApp Phone Number</label>
+                      <input
+                        type="tel"
+                        required
+                        value={deliveryPhone}
+                        onChange={(e) => setDeliveryPhone(e.target.value)}
+                        placeholder="e.g. 9999999999"
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                      />
+                    </div>
 
-                  {/* Official Email */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Official Email (Optional)</label>
-                    <input
-                      type="email"
-                      value={sheetOfficialEmail}
-                      onChange={(e) => setSheetOfficialEmail(e.target.value)}
-                      placeholder="e.g. mail@company.com"
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
-                    />
-                  </div>
+                    {/* Email */}
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={deliveryEmail}
+                        onChange={(e) => setDeliveryEmail(e.target.value)}
+                        placeholder="e.g. john@example.com"
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                      />
+                    </div>
 
-                  {/* WhatsApp Number */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">WhatsApp Contact Number</label>
-                    <input
-                      type="text"
-                      required
-                      value={sheetWhatsApp}
-                      onChange={(e) => setSheetWhatsApp(e.target.value)}
-                      placeholder="e.g. +91 9999999999"
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
-                    />
-                  </div>
+                    {/* Location Link */}
+                    <div className="md:col-span-2 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Location Link</label>
+                        <button
+                          type="button"
+                          onClick={handleGetCurrentLocation}
+                          disabled={isDetectingLocation}
+                          className="text-[10px] uppercase font-bold tracking-wider text-afterhours-cyan hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 bg-afterhours-cyan/10 hover:bg-afterhours-cyan/25 border border-afterhours-cyan/20 py-1.5 px-3.5 rounded-full outline-none"
+                        >
+                          <Navigation size={10} className={isDetectingLocation ? "animate-spin" : ""} />
+                          {isDetectingLocation ? "Detecting Coordinates..." : "📍 Use My Current Location"}
+                        </button>
+                      </div>
+                      <input
+                        type="url"
+                        required
+                        value={deliveryLocation}
+                        onChange={(e) => setDeliveryLocation(e.target.value)}
+                        placeholder="e.g. https://maps.app.goo.gl/... or use button above"
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                      />
+                    </div>
 
-                  {/* Location Link */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Delivery Location Google Maps Link</label>
-                    <input
-                      type="url"
-                      required
-                      value={sheetLocationLink}
-                      onChange={(e) => setSheetLocationLink(e.target.value)}
-                      placeholder="e.g. https://maps.app.goo.gl/..."
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
-                    />
                   </div>
-
                 </div>
 
-                {sheetsError && (
+                {deliveryError && (
                   <div className="flex items-center gap-2 p-4 bg-red-950/40 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
-                    <AlertCircle size={16} /> {sheetsError}
+                    <AlertCircle size={16} /> {deliveryError}
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  disabled={isSyncingSheets}
+                  disabled={isSyncingDelivery}
                   className="w-full py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.01] active:scale-98 shadow-xl flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isSyncingSheets ? (
+                  {isSyncingDelivery ? (
                     <>
                       <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      Syncing to Google Sheets...
+                      Saving remaining details...
                     </>
-                  ) : googleToken ? (
-                    "Authorize & Log Booking to Google Sheets ➔"
                   ) : (
-                    "Login with Google & Log Booking Row ➔"
+                    "Submit Details for Smooth Delivery ➔"
                   )}
                 </button>
               </form>
@@ -715,7 +752,7 @@ export function Checkout() {
               </div>
             </motion.div>
           ) : (
-            /* Ultimate Booking Completed Screen Overlay with sheets link */
+            /* Ultimate Booking Completed Screen Overlay */
             <motion.div
               key="payment-success-overlay"
               initial={{ scale: 0.95, opacity: 0 }}
@@ -732,8 +769,8 @@ export function Checkout() {
               <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight mb-2 text-white">
                 Booking <span className="text-afterhours-green">Confirmed!</span>
               </h2>
-              <p className="text-white/40 text-xs uppercase font-bold tracking-widest bg-black/30 py-1.5 px-4 rounded-full inline-block mb-8">
-                Synced with Google Sheets Log
+              <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest bg-black/30 py-1.5 px-4 rounded-full inline-block mb-3">
+                Delivery Schedule Locked
               </p>
 
               <div className="space-y-4 text-left bg-black/40 border border-white/5 p-6 rounded-2xl mb-8 font-mono text-xs">
@@ -742,34 +779,17 @@ export function Checkout() {
                   <span className="text-white font-bold">{paymentDetails?.paymentId}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="text-white/40 uppercase">Spreadsheet Log</span>
-                  <span className="text-afterhours-green font-bold">Logged successfully</span>
-                </div>
-                <div className="flex justify-between border-b border-white/5 pb-2">
                   <span className="text-white/40 uppercase">Amount Paid</span>
                   <span className="text-afterhours-green font-bold">₹{paymentDetails?.amountPaid}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/40 uppercase">Registered Customer</span>
-                  <span className="text-white font-bold">{sheetFullName}</span>
+                  <span className="text-white font-bold">{deliveryName}</span>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
-                {spreadsheetLink && (
-                  <a
-                    href={spreadsheetLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full block py-4 rounded-2xl text-xs font-black uppercase tracking-[0.15em] bg-afterhours-green text-black hover:scale-102 transition-all text-center shadow-[0_0_20px_rgba(34,197,94,0.3)] duration-200"
-                  >
-                    Open Google Sheets Bookings Log ➔
-                  </a>
-                )}
-              </div>
-
               <p className="text-white/60 text-xs leading-relaxed max-w-md mx-auto mb-8">
-                Your setup is locked for <span className="text-white font-black">{startDate}</span> to <span className="text-white font-black">{endDate}</span>. Our concierge team has verified your Google Sheets registry entry and will contact you at <span className="text-afterhours-cyan font-bold">{sheetWhatsApp}</span> to coordinate delivery setup!
+                Your setup is locked for <span className="text-white font-black">{startDate}</span> to <span className="text-white font-black">{endDate}</span>. Our concierge team has verified your delivery details and will contact you at <span className="text-afterhours-cyan font-bold">{deliveryPhone}</span> to coordinate delivery setup!
               </p>
 
               <div className="flex justify-center gap-4">
@@ -781,7 +801,7 @@ export function Checkout() {
                 </a>
                 <a
                   href={`https://wa.me/919711844884?text=${encodeURIComponent(
-                    `Hey After Hours! I just paid ₹${paymentDetails?.amountPaid} on your portal and logged the sheets register. Full Name: ${sheetFullName}. Dates: ${startDate} to ${endDate}. Trans ID: ${paymentDetails?.paymentId}`
+                    `Hey After Hours! I just paid ₹${paymentDetails?.amountPaid} on your portal and shared my delivery details. Customer: ${deliveryName}. Dates: ${startDate} to ${endDate}. Trans ID: ${paymentDetails?.paymentId}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
