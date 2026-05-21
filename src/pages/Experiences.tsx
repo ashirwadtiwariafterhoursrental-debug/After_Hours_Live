@@ -479,6 +479,7 @@ export function Experiences() {
                 <label className="text-xs font-black uppercase tracking-widest text-white/40 ml-4">Event Date</label>
                 <input 
                   type="date" 
+                  onKeyDown={(e) => e.preventDefault()}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-afterhours-purple transition-colors"
                 />
               </div>

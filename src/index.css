@@ -41,3 +41,8 @@
     @apply bg-clip-text text-transparent bg-linear-to-r from-afterhours-purple via-afterhours-pink to-afterhours-cyan;
   }
 }
+
+/* Dark Mode Date Picker Indicator Fix */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg) brightness(102%) contrast(102%);
+}

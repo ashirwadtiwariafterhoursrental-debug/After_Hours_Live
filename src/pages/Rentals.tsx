@@ -233,6 +233,7 @@ export function Rentals() {
   // --- Effects ---
   useEffect(() => {
     const validCodes = activeCodes.filter(code => {
+      if (code.toUpperCase().startsWith("SPECIAL")) return true;
       if (code in fixedPriceCodes) return true;
       const promo = PROMO_CODES[code];
       if (promo && promo.minSubtotal && subtotal <= promo.minSubtotal) return false;
@@ -268,6 +269,22 @@ export function Rentals() {
   const applyPromoCode = () => {
     const code = promoInput.toUpperCase().trim();
     if (!code) return;
+
+    // Check if it's a SPECIAL prefix code
+    if (code.startsWith("SPECIAL")) {
+      const amtStr = code.replace("SPECIAL", "");
+      const parsedAmt = parseInt(amtStr, 10);
+      if (!isNaN(parsedAmt) && parsedAmt > 0) {
+        if (activeCodes.includes(code)) {
+          setPromoError("Code already applied.");
+          return;
+        }
+        setPromoError("");
+        setActiveCodes(prev => [...prev, code]);
+        setPromoInput("");
+        return;
+      }
+    }
 
     // Check if it's in fixed price Codes
     const overrideVal = fixedPriceCodes[code];
@@ -623,6 +640,7 @@ export function Rentals() {
                       min={today}
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
+                      onKeyDown={(e) => e.preventDefault()}
                       className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-afterhours-purple transition-colors cursor-pointer"
                     />
                   </div>
@@ -633,6 +651,7 @@ export function Rentals() {
                       min={startDate || today}
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
+                      onKeyDown={(e) => e.preventDefault()}
                       className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-afterhours-cyan transition-colors cursor-pointer"
                     />
                   </div>

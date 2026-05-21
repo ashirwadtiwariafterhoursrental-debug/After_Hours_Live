@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -33,13 +33,17 @@ interface CheckoutData {
 export function Checkout() {
   const navigate = useNavigate();
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
-  const [paymentOption, setPaymentOption] = useState<"reserve" | "full">("full");
+  const [paymentOption, setPaymentOption] = useState<"reserve" | "full" | "custom_reserve">("full");
   const [selectedVipPerk, setSelectedVipPerk] = useState<"controller" | "game">("controller");
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [paymentError, setPaymentError] = useState("");
+
+  // States for dynamic SPECIAL Custom Deposit code on payment page
+  const [checkoutSpecialCode, setCheckoutSpecialCode] = useState("");
+  const [checkoutSpecialError, setCheckoutSpecialError] = useState("");
 
   // Delivery details collection states (logs to dispatch register on server)
   const [deliveryName, setDeliveryName] = useState("");
@@ -50,6 +54,13 @@ export function Checkout() {
   const [deliverySynced, setDeliverySynced] = useState(false);
   const [isSyncingDelivery, setIsSyncingDelivery] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  // File upload state for KYC/Corporate ID verification
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileBase64, setFileBase64] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [fileMimeType, setFileMimeType] = useState("");
+  const [fileError, setFileError] = useState("");
 
   // Load checkout data from localStorage
   useEffect(() => {
@@ -66,6 +77,15 @@ export function Checkout() {
       // Auto-populate form details from previous step
       if (parsed.name) setDeliveryName(parsed.name);
       if (parsed.phone) setDeliveryPhone(parsed.phone);
+
+      // Check if code list already has a SPECIAL code and auto-activate Option 3
+      if (parsed.activeCodes && parsed.activeCodes.length > 0) {
+        const special = parsed.activeCodes.find((code: string) => code.toUpperCase().startsWith("SPECIAL"));
+        if (special) {
+          setCheckoutSpecialCode(special.toUpperCase());
+          setPaymentOption("custom_reserve");
+        }
+      }
     } catch (e) {
       console.error("Error parsing checkout data:", e);
       navigate("/rentals");
@@ -113,8 +133,104 @@ export function Checkout() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   };
 
+  const getReserveDepositAmount = () => {
+    return 500;
+  };
+
+  const getCustomDepositAmount = () => {
+    if (activeCodes && activeCodes.length > 0) {
+      const specialCode = activeCodes.find(code => code.toUpperCase().startsWith("SPECIAL"));
+      if (specialCode) {
+        const amtStr = specialCode.toUpperCase().replace("SPECIAL", "");
+        const parsedAmt = parseInt(amtStr, 10);
+        if (!isNaN(parsedAmt) && parsedAmt > 0) {
+          return parsedAmt;
+        }
+      }
+    }
+    return null;
+  };
+
   const calculatePaymentAmount = () => {
-    return paymentOption === "reserve" ? 500 : finalTotal;
+    if (paymentOption === "reserve") {
+      return 500;
+    }
+    if (paymentOption === "custom_reserve") {
+      return getCustomDepositAmount() || 500;
+    }
+    return finalTotal;
+  };
+
+  const handleApplySpecialCode = () => {
+    setCheckoutSpecialError("");
+    const code = checkoutSpecialCode.trim().toUpperCase();
+    if (!code) {
+      setCheckoutSpecialError("Please enter a valid token code.");
+      return;
+    }
+
+    if (!code.startsWith("SPECIAL")) {
+      setCheckoutSpecialError("The entered token code is invalid or not registered.");
+      return;
+    }
+
+    const amtStr = code.replace("SPECIAL", "");
+    const parsedAmt = parseInt(amtStr, 10);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      setCheckoutSpecialError("The entered token code is invalid or not registered.");
+      return;
+    }
+
+    // Apply code locally to the list of active codes
+    setCheckoutData(prev => {
+      if (!prev) return null;
+      // Filter out any older SPECIAL codes
+      const cleanCodes = prev.activeCodes.filter(c => !c.toUpperCase().startsWith("SPECIAL"));
+      const newActiveCodes = [...cleanCodes, code];
+      
+      // Persist to localStorage
+      const updated = { ...prev, activeCodes: newActiveCodes };
+      localStorage.setItem("afterhours_checkout_data", JSON.stringify(updated));
+      return updated;
+    });
+
+    setPaymentOption("custom_reserve");
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFileError("");
+    const file = e.target.files?.[0];
+    if (!file) {
+      setSelectedFile(null);
+      setFileBase64("");
+      setFileName("");
+      setFileMimeType("");
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      setFileError("File exceeds the maximum limit of 3MB.");
+      setSelectedFile(null);
+      setFileBase64("");
+      setFileName("");
+      setFileMimeType("");
+      return;
+    }
+
+    setSelectedFile(file);
+    setFileName(file.name);
+    setFileMimeType(file.type);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const resultStr = reader.result as string;
+      const base64Content = resultStr.split(",")[1] || "";
+      setFileBase64(base64Content);
+    };
+    reader.onerror = () => {
+      setFileError("Error converting file to Base64.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRazorpayPayment = () => {
@@ -135,7 +251,9 @@ export function Checkout() {
       name: "After Hours",
       description: paymentOption === "reserve" 
         ? "Reserve Now - Date & Gear Lock" 
-        : `Pay In Full - VIP Premium Package (${selectedVipPerk === "controller" ? "Extra Premium Controller" : "Premium Game Add-on"})`,
+        : paymentOption === "custom_reserve"
+          ? `Custom Reserve Deposit (Approved Code: ${checkoutSpecialCode})`
+          : `Pay In Full - VIP Premium Package (${selectedVipPerk === "controller" ? "Extra Premium Controller" : "Premium Game Add-on"})`,
       image: "https://images.unsplash.com/photo-1612287230202-1bf1d85d1bdf?auto=format&fit=crop&q=80&w=150&h=150", 
       handler: function (response: any) {
         setIsProcessing(false);
@@ -157,7 +275,8 @@ export function Checkout() {
       notes: {
         address: "New Delhi Delivery Setup",
         rental_dates: `${startDate} to ${endDate}`,
-        vip_perk: paymentOption === "full" ? selectedVipPerk : "none"
+        vip_perk: paymentOption === "full" ? selectedVipPerk : "none",
+        special_code: paymentOption === "custom_reserve" ? checkoutSpecialCode : "none"
       },
       theme: {
         color: "#a855f7" // Neon violet/purple brand highlight
@@ -245,27 +364,29 @@ export function Checkout() {
       const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
       const discountStr = `₹${discount || 0}`;
 
-      const res = await fetch("/api/submit-delivery", {
+      const res = await fetch("https://script.google.com/macros/s/AKfycbwwIF0RvkuvSjJym3E5rnBcwOS_xBqgKrR6Aw63-E8jITKLz_qDuZfWKkxL2Ad0kjXz/exec", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "text/plain;charset=utf-8",
         },
         body: JSON.stringify({
           transactionId: paymentDetails?.paymentId || "N/A",
           totalPaid: totalPaidStr,
           discount: discountStr,
-          assetsRented: bookingItemsStr,
+          assetsRent: bookingItemsStr,
           dates: durationStr,
           name: deliveryName,
-          phone: deliveryPhone,
+          number: deliveryPhone,
           email: deliveryEmail,
           location: deliveryLocation,
+          fileBase64: fileBase64 || "",
+          fileName: fileName || "",
+          fileMimeType: fileMimeType || "",
         })
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Server failed to record delivery details. Please retry.");
+      if (!res.ok && res.status !== 200) {
+        throw new Error("Unable to log delivery details to dispatcher spreadsheet. Please try again.");
       }
 
       setDeliverySynced(true);
@@ -432,9 +553,16 @@ export function Checkout() {
                 <div className="space-y-4">
                   
                   {/* Option 1: Reserve Now - 500 */}
-                  <button 
+                  <div 
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setPaymentOption("reserve")}
-                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 ${
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setPaymentOption("reserve");
+                      }
+                    }}
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-purple ${
                       paymentOption === "reserve" 
                         ? "bg-afterhours-gray border-afterhours-purple/60 shadow-[0_0_20px_rgba(168,85,247,0.1)]" 
                         : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
@@ -451,20 +579,27 @@ export function Checkout() {
                     <div className="flex-1">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-black uppercase italic text-white">
-                          Reserve Now (Pay ₹500 Deposit)
+                          Reserve Now (Pay ₹{getReserveDepositAmount()} Deposit)
                         </span>
-                        <span className="text-xs font-bold text-white/60 font-mono">₹500</span>
+                        <span className="text-xs font-bold text-white/60 font-mono">₹{getReserveDepositAmount()}</span>
                       </div>
                       <p className="text-[11px] text-white/50 leading-relaxed">
-                        Lock in your dates and gear today. The remaining balance (₹{finalTotal - 500}) is due upon doorstep delivery and setup.
+                        Lock in your dates and gear today. The remaining balance (₹{finalTotal - getReserveDepositAmount()}) is due upon doorstep delivery and setup.
                       </p>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Option 2 Card: Highly Highlighted Pay in Full */}
-                  <button 
+                  <div 
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setPaymentOption("full")}
-                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 overflow-hidden ${
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setPaymentOption("full");
+                      }
+                    }}
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 overflow-hidden cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-green ${
                       paymentOption === "full" 
                         ? "bg-afterhours-gray border-afterhours-green/80 shadow-[0_0_25px_rgba(34,197,94,0.15)] ring-2 ring-afterhours-green/25" 
                         : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
@@ -511,7 +646,7 @@ export function Checkout() {
                                 e.stopPropagation();
                                 setSelectedVipPerk("controller");
                               }}
-                              className={`p-3 rounded-xl border text-center transition-all ${
+                              className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                 selectedVipPerk === "controller" 
                                   ? "bg-afterhours-green/10 border-afterhours-green text-afterhours-green font-bold text-[10px] uppercase tracking-wider" 
                                   : "bg-white/5 border-white/5 text-white/40 text-[10px] uppercase tracking-wider hover:border-white/10"
@@ -525,7 +660,7 @@ export function Checkout() {
                                 e.stopPropagation();
                                 setSelectedVipPerk("game");
                               }}
-                              className={`p-3 rounded-xl border text-center transition-all ${
+                              className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                 selectedVipPerk === "game" 
                                   ? "bg-afterhours-green/10 border-afterhours-green text-afterhours-green font-bold text-[10px] uppercase tracking-wider" 
                                   : "bg-white/5 border-white/5 text-white/40 text-[10px] uppercase tracking-wider hover:border-white/10"
@@ -537,7 +672,88 @@ export function Checkout() {
                         </motion.div>
                       )}
                     </div>
-                  </button>
+                  </div>
+
+                  {/* Option 3: Custom Deposit (SPECIAL Code Required) */}
+                  <div 
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (getCustomDepositAmount()) {
+                        setPaymentOption("custom_reserve");
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        if (getCustomDepositAmount()) {
+                          setPaymentOption("custom_reserve");
+                        }
+                      }
+                    }}
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex flex-col items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-cyan ${
+                      paymentOption === "custom_reserve" 
+                        ? "bg-afterhours-gray border-afterhours-cyan/60 shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
+                        : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
+                    } ${!getCustomDepositAmount() ? "opacity-95" : ""}`}
+                  >
+                    <div className="flex items-start gap-4 w-full">
+                      <div className="mt-1 flex items-center justify-center">
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                          paymentOption === "custom_reserve" ? "border-afterhours-cyan" : "border-white/30"
+                        }`}>
+                          {paymentOption === "custom_reserve" && <div className="w-2.5 h-2.5 rounded-full bg-afterhours-cyan" />}
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-black uppercase italic text-white flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-afterhours-cyan animate-pulse" />
+                            Option 3: Team-Shared Token Deposit
+                          </span>
+                          {getCustomDepositAmount() ? (
+                            <span className="text-xs font-black text-afterhours-cyan font-mono bg-afterhours-cyan/15 px-3 py-1 rounded-full border border-afterhours-cyan/25 animate-pulse">₹{getCustomDepositAmount()}</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded border border-white/5 font-mono">CODE REQUIRED</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-white/50 leading-relaxed max-w-lg mb-4">
+                          Need a customized deposit token? Enter the exclusive booking lock code shared by our support agents during consultation.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Integrated dynamic code slot */}
+                    <div className="w-full pl-9" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-2 max-w-sm">
+                        <input
+                          type="text"
+                          placeholder="Enter exclusive code"
+                          value={checkoutSpecialCode}
+                          onChange={(e) => {
+                            setCheckoutSpecialCode(e.target.value.toUpperCase().trim());
+                            setCheckoutSpecialError("");
+                          }}
+                          className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono uppercase tracking-widest focus:outline-none focus:border-afterhours-cyan flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplySpecialCode}
+                          className="bg-afterhours-cyan/10 border border-afterhours-cyan text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black font-black uppercase tracking-wider text-[10px] px-4 py-2 rounded-xl transition-all"
+                        >
+                          Apply Token Code
+                        </button>
+                      </div>
+                      {checkoutSpecialError && (
+                        <p className="text-[10px] text-red-400 font-mono italic mt-1.5">{checkoutSpecialError}</p>
+                      )}
+                      {getCustomDepositAmount() && (
+                        <p className="text-[10px] text-afterhours-green font-mono italic mt-1.5 animate-pulse">
+                          ✓ Token applied! Custom deposit of ₹{getCustomDepositAmount()} activated (remaining dues ₹{finalTotal - (getCustomDepositAmount() || 0)}).
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
                 </div>
 
@@ -621,7 +837,7 @@ export function Checkout() {
                   <div>
                     <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Total Paid Funds</span>
                     <span className="text-white font-bold">
-                      ₹{paymentDetails?.amountPaid || calculatePaymentAmount()} ({paymentOption === "reserve" ? "₹500 Deposit" : "Full"})
+                      ₹{paymentDetails?.amountPaid || calculatePaymentAmount()} ({paymentOption === "reserve" ? "₹500 Deposit" : paymentOption === "custom_reserve" ? `₹${getCustomDepositAmount()} Custom Deposit` : "Full"})
                     </span>
                   </div>
                   <div>
@@ -716,6 +932,33 @@ export function Checkout() {
                       />
                     </div>
 
+                    {/* Government ID / Corporate ID File Upload input (KYC) */}
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">
+                        Upload Corporate ID / Government ID (For Zero-Deposit Verification) <span className="text-white/30 italic">(Optional)</span>
+                      </label>
+                      <div className="relative group border-2 border-dashed border-white/10 rounded-2xl p-6 bg-black/30 hover:bg-black/50 hover:border-afterhours-purple/40 transition-all flex flex-col items-center justify-center cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf, image/jpeg, image/png"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <div className="text-center space-y-2 pointer-events-none">
+                          <div className="text-xl">📁</div>
+                          <p className="text-xs text-white/70 font-semibold font-mono">
+                            {selectedFile ? `✓ Selected: ${selectedFile.name}` : "Click to select or drag & drop"}
+                          </p>
+                          <p className="text-[9px] text-white/40 uppercase tracking-widest font-mono">
+                            Supports PDF, JPEG, PNG (Max 3MB file size limit)
+                          </p>
+                        </div>
+                      </div>
+                      {fileError && (
+                        <p className="text-xs text-red-500 font-mono italic mt-1">⚠️ {fileError}</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
 
@@ -767,7 +1010,7 @@ export function Checkout() {
               </div>
 
               <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight mb-2 text-white">
-                Booking <span className="text-afterhours-green">Confirmed!</span>
+                Delivery <span className="text-afterhours-cyan">Confirmed!</span>
               </h2>
               <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest bg-black/30 py-1.5 px-4 rounded-full inline-block mb-3">
                 Delivery Schedule Locked
