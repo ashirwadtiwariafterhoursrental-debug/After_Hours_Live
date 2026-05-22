@@ -299,6 +299,28 @@ export function Checkout() {
     }
   };
 
+  const handleWhatsAppFallback = () => {
+    const txId = paymentDetails?.paymentId || "N/A";
+    const amtPaid = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
+
+    const textPayload = `Hello After Hours! I just completed my payment online but had trouble with the form.
+
+Transaction ID: ${txId}
+Amount Paid: ${amtPaid}
+
+Here are my remaining details for delivery:
+
+*Name: * ${deliveryName || ""}
+*Contact Number: * ${deliveryPhone || ""}
+*Email: * ${deliveryEmail || ""}
+*Delivery Location: * ${deliveryLocation || ""}
+
+(I will attach my Corporate/Govt ID to this chat)`;
+
+    const encodedText = encodeURIComponent(textPayload);
+    window.open(`https://wa.me/919711844884?text=${encodedText}`, "_blank", "noopener,noreferrer");
+  };
+
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
       setDeliveryError("Geolocation is not supported by your browser. Please paste a link manually.");
@@ -981,6 +1003,14 @@ export function Checkout() {
                   ) : (
                     "Submit Details for Smooth Delivery ➔"
                   )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleWhatsAppFallback}
+                  className="w-full py-4 rounded-2xl text-xs font-bold uppercase tracking-[0.15em] transition-all bg-black/40 border border-[#25D366]/40 text-[#25D366] hover:bg-black/60 hover:border-[#25D366]/80 hover:scale-[1.01] active:scale-98 shadow-lg flex items-center justify-center gap-2 cursor-pointer text-center"
+                >
+                  <span className="text-sm">💬</span> Having trouble? Send details via WhatsApp
                 </button>
               </form>
 
