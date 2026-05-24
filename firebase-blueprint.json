@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "blog": {
+      "title": "Blog",
+      "description": "A blog post managed by admins",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Blog title" },
+        "content": { "type": "string", "description": "Blog content markdown or rich text" },
+        "coverPhotoUrl": { "type": "string", "description": "URL to the cover photo in Firebase Storage" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of post creation" }
+      },
+      "required": ["title", "content", "coverPhotoUrl", "createdAt"]
+    }
+  },
+  "firestore": {
+    "blogs/{blogId}": {
+      "schema": "blog",
+      "description": "Collection of public blog posts"
+    }
+  }
+}

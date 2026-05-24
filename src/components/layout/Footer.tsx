@@ -95,6 +95,13 @@ export function Footer() {
             <p className="text-[10px] uppercase tracking-[0.4em] text-white/60 font-black italic">
               DESIGNED FOR THE ELITE.
             </p>
+            <Link 
+              to="/admin" 
+              className="text-[10.5px] font-bold text-white/10 hover:text-afterhours-purple transition-all duration-300 ml-2 hover:scale-105 select-none font-mono"
+              title="Operator Portal"
+            >
+              (AH)
+            </Link>
           </div>
         </div>
       </div>

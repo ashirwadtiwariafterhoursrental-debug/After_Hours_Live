@@ -102,6 +102,33 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      {/* Operator Portal Banner (Admin & Publishing Hub) */}
+      <section className="py-12 bg-black/20 border-t border-b border-white/5 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-afterhours-purple/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 rounded-3xl bg-white/[0.01] border border-white/5 hover:border-afterhours-purple/20 transition-all max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 text-left">
+              <div className="w-12 h-12 rounded-2xl bg-afterhours-purple/10 flex items-center justify-center border border-afterhours-purple/20 text-afterhours-purple">
+                <Users size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-widest text-white italic">Operator & Blog Portal</h4>
+                <p className="text-xs text-white/40 mt-1 leading-relaxed">
+                  Authorized team members and moderators can log in to publish latest press releases, event coverages, and custom updates.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/admin"
+              className="px-6 py-3 bg-gradient-to-r from-afterhours-purple to-afterhours-pink hover:brightness-110 text-white font-black uppercase tracking-wider text-xs italic rounded-xl transition-all shadow-[0_4px_15px_rgba(168,85,247,0.2)] whitespace-nowrap flex items-center gap-2"
+            >
+              <span>Access Admin Hub</span>
+              <ArrowRight size={12} />
+            </Link>
+          </div>
+        </div>
+      </section>
       
       {/* CTA Section */}
       <section className="py-24 bg-afterhours-purple relative overflow-hidden">

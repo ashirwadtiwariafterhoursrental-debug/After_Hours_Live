@@ -1,25 +1,36 @@
 import { motion } from "motion/react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/src/lib/utils";
-import { Menu, X, Gamepad2 } from "lucide-react";
+import { Menu, X, Gamepad2, User } from "lucide-react";
 import { useState, useEffect } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth } from "../../firebase";
 
 const navLinks = [
+  { name: "Home", path: "/" },
   { name: "Experiences", path: "/experiences" },
   { name: "Rentals", path: "/rentals" },
-  { name: "Corporate", path: "/corporate" },
+  { name: "Blog", path: "/blog" },
   { name: "Contact", path: "/contact" },
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -64,6 +75,23 @@ export function Navbar() {
               {link.name}
             </Link>
           ))}
+          {currentUser ? (
+            <Link
+              to="/profile"
+              className="text-xs font-black uppercase tracking-widest hover:text-afterhours-cyan transition-colors flex items-center gap-1.5 border border-white/10 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10"
+              title="My Profile"
+            >
+              <User size={12} className="text-afterhours-purple" />
+              <span>My Account</span>
+            </Link>
+          ) : (
+            <Link
+              to="/customer-login"
+              className="text-xs font-black uppercase tracking-widest hover:text-afterhours-cyan transition-colors flex items-center gap-1.5 border border-white/10 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10"
+            >
+              <span>Login / Sign Up</span>
+            </Link>
+          )}
           <a
             href="https://wa.me/919711844884"
             target="_blank"
@@ -97,6 +125,24 @@ export function Navbar() {
               {link.name}
             </Link>
           ))}
+          {currentUser ? (
+            <Link
+              to="/profile"
+              onClick={() => setIsOpen(false)}
+              className="text-lg font-bold uppercase tracking-widest text-[#90e0d0] flex items-center gap-2"
+            >
+              <User size={18} className="text-afterhours-purple" />
+              <span>My Account</span>
+            </Link>
+          ) : (
+            <Link
+              to="/customer-login"
+              onClick={() => setIsOpen(false)}
+              className="text-lg font-bold uppercase tracking-widest text-[#90e0d0]"
+            >
+              <span>Login / Sign Up</span>
+            </Link>
+          )}
           <a
             href="https://wa.me/919711844884"
             target="_blank"

@@ -5,10 +5,14 @@ import { Footer } from "./components/layout/Footer";
 import { ChatSupport } from "./components/ChatSupport";
 import { Home } from "./pages/Home";
 import { Experiences } from "./pages/Experiences";
-import { Corporate } from "./pages/Corporate";
 import { Rentals } from "./pages/Rentals";
+import { Blog } from "./pages/Blog";
 import { Contact } from "./pages/Contact";
 import { Checkout } from "./pages/Checkout";
+import { AdminLogin } from "./pages/AdminLogin";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { CustomerLogin } from "./pages/CustomerLogin";
+import { CustomerProfile } from "./pages/CustomerProfile";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -28,10 +32,14 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/experiences" element={<Experiences />} />
-          <Route path="/corporate" element={<Corporate />} />
           <Route path="/rentals" element={<Rentals />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/customer-login" element={<CustomerLogin />} />
+          <Route path="/profile" element={<CustomerProfile />} />
         </Routes>
         <Footer />
       </div>

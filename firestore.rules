@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global reusable helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidBlog(blog) {
+      return blog.title is string && blog.title.size() >= 1 && blog.title.size() <= 500
+          && blog.content is string && blog.content.size() >= 1 && blog.content.size() <= 100000
+          && blog.coverPhotoUrl is string && blog.coverPhotoUrl.size() >= 10 && blog.coverPhotoUrl.size() <= 2048
+          && blog.createdAt == request.time;
+    }
+
+    function isValidUser(user) {
+      return user.name is string && user.name.size() >= 0 && user.name.size() <= 600
+          && user.email is string && user.email.size() >= 3 && user.email.size() <= 320
+          && user.phone is string && user.phone.size() >= 0 && user.phone.size() <= 100
+          && user.address is string && user.address.size() >= 0 && user.address.size() <= 5000;
+    }
+
+    // Blogs Collection Match
+    match /blogs/{blogId} {
+      allow read: if true; // Anyone can read blogs
+      allow create: if isSignedIn() && isValidBlog(request.resource.data);
+      allow update, delete: if isSignedIn(); // Only authorized administrators can alter or remove posts
+    }
+
+    // Users & KYC Profiles Collection MATCH
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(request.resource.data) && (
+        !request.resource.data.keys().hasAll(['kycStatus']) || 
+        !resource.data.keys().hasAll(['kycStatus']) ||
+        (request.resource.data.kycStatus == resource.data.kycStatus) || 
+        (resource.data.kycStatus == "unverified" && request.resource.data.kycStatus == "pending") ||
+        (resource.data.kycStatus == "pending" && request.resource.data.kycStatus == "pending")
+      );
+      allow delete: if false;
+    }
+  }
+}
