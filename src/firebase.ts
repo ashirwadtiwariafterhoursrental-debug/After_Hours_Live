@@ -5,7 +5,7 @@ import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtgf0Jrwyk0AVXdEiuc9iC5XmtAcO3jHY",
-  authDomain: "afterhours-3704d.firebaseapp.com",
+  authDomain: "afterhoursrental.in",
   projectId: "afterhours-3704d",
   storageBucket: "afterhours-3704d.firebasestorage.app",
   messagingSenderId: "278513673850",
