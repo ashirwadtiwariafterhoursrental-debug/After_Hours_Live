@@ -7,6 +7,9 @@ import {
   MapPin, Navigation
 } from "lucide-react";
 import { fixedPriceCodes } from "../lib/fixedPriceCodes";
+import { db, storage, auth, handleFirestoreError, OperationType } from "../firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc } from "firebase/firestore";
 
 interface CheckoutItem {
   id: string;
@@ -386,35 +389,40 @@ Here are my remaining details for delivery:
       const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
       const discountStr = `₹${discount || 0}`;
 
-      const res = await fetch("https://script.google.com/macros/s/AKfycbwwIF0RvkuvSjJym3E5rnBcwOS_xBqgKrR6Aw63-E8jITKLz_qDuZfWKkxL2Ad0kjXz/exec", {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify({
-          transactionId: paymentDetails?.paymentId || "N/A",
-          totalPaid: totalPaidStr,
-          discount: discountStr,
-          assetsRent: bookingItemsStr,
-          dates: durationStr,
-          name: deliveryName,
-          number: deliveryPhone,
-          email: deliveryEmail,
-          location: deliveryLocation,
-          fileBase64: fileBase64 || "",
-          fileName: fileName || "",
-          fileMimeType: fileMimeType || "",
-        })
-      });
-
-      if (!res.ok && res.status !== 200) {
-        throw new Error("Unable to log delivery details to dispatcher spreadsheet. Please try again.");
+      // 1. Upload file if selected
+      let fileUrl = "";
+      if (selectedFile) {
+        const uniqueFolder = auth.currentUser?.uid || `guest_${Date.now()}`;
+        const storagePath = `kyc_uploads/${uniqueFolder}/${selectedFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadResult = await uploadBytes(storageRef, selectedFile);
+        fileUrl = await getDownloadURL(uploadResult.ref);
       }
+
+      // 2. Add document to Firestore 'orders' collection
+      await addDoc(collection(db, "orders"), {
+        name: deliveryName,
+        dates: durationStr,
+        transactionId: paymentDetails?.paymentId || "N/A",
+        location: deliveryLocation,
+        documentUrl: fileUrl,
+        email: deliveryEmail,
+        number: deliveryPhone,
+        totalPaid: totalPaidStr,
+        discount: discountStr,
+        assetsRent: bookingItemsStr,
+        createdAt: new Date().toISOString()
+      });
 
       setDeliverySynced(true);
     } catch (err: any) {
       console.error("Delivery submission error:", err);
-      setDeliveryError(err.message || "Failed to submit delivery details. Please confirm inputs and try again.");
+      try {
+        handleFirestoreError(err, OperationType.WRITE, "orders");
+      } catch (firestoreErr: any) {
+        setDeliveryError("Failure registering delivery: permissions are insufficient or offline client.");
+        throw firestoreErr;
+      }
     } finally {
       setIsSyncingDelivery(false);
     }

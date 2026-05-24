@@ -8,8 +8,8 @@ import { auth } from "../../firebase";
 
 const navLinks = [
   { name: "Home", path: "/" },
-  { name: "Experiences", path: "/experiences" },
   { name: "Rentals", path: "/rentals" },
+  { name: "Experiences", path: "/experiences" },
   { name: "Blog", path: "/blog" },
   { name: "Contact", path: "/contact" },
 ];
