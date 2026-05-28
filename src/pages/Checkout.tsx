@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, ShieldCheck, CreditCard, Sparkles, Check, 
   Clock, HelpCircle, AlertCircle, ShoppingCart, Calendar, Tag, CheckCircle2,
-  MapPin, Navigation
+  MapPin, Navigation, UserPlus, LogIn, Lock
 } from "lucide-react";
 import { fixedPriceCodes } from "../lib/fixedPriceCodes";
 import { db, storage, auth, handleFirestoreError, OperationType } from "../firebase";
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, runTransaction, setDoc } from "firebase/firestore";
 
 interface CheckoutItem {
   id: string;
@@ -64,6 +65,26 @@ export function Checkout() {
   const [fileName, setFileName] = useState("");
   const [fileMimeType, setFileMimeType] = useState("");
   const [fileError, setFileError] = useState("");
+
+  // Forced Authentication states (before delivery details form can be submitted)
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authFormMode, setAuthFormMode] = useState<"login" | "signup">("signup");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+
+  // Sync session state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user && user.email) {
+        setDeliveryEmail((prev) => prev || user.email || "");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Load checkout data from localStorage
   useEffect(() => {
@@ -362,6 +383,67 @@ Here are my remaining details for delivery:
     );
   };
 
+  const handleForcedAuthSubmission = async (e: FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsAuthSubmitting(true);
+    const trimmedEmail = authEmail.trim();
+    try {
+      if (authFormMode === "login") {
+        await signInWithEmailAndPassword(auth, trimmedEmail, authPassword);
+      } else {
+        if (!authName.trim()) {
+          throw new Error("Full name is required.");
+        }
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, authPassword);
+        await updateProfile(userCredential.user, { displayName: authName });
+        setDeliveryName(authName);
+        setDeliveryEmail(trimmedEmail);
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          name: authName,
+          email: trimmedEmail,
+          createdAt: new Date().toISOString(),
+          phone: deliveryPhone || ""
+        }, { merge: true });
+      }
+    } catch (err: any) {
+      console.error("Forced checkout auth error:", err);
+      const isInvalidCred = 
+        err.code === "auth/user-not-found" || 
+        err.code === "auth/wrong-password" || 
+        err.code === "auth/invalid-credential" || 
+        (err.message && (
+          err.message.includes("auth/invalid-credential") || 
+          err.message.includes("invalid-credential") || 
+          err.message.includes("user-not-found") || 
+          err.message.includes("wrong-password")
+        ));
+        
+      const isEmailInUse = 
+        err.code === "auth/email-already-in-use" ||
+        (err.message && err.message.includes("email-already-in-use"));
+
+      const isWeakPass = 
+        err.code === "auth/weak-password" ||
+        (err.message && err.message.includes("weak-password"));
+
+      let msg = "Failed to authenticate. Try again.";
+      if (isInvalidCred) {
+        msg = "Invalid email or password. Please verify your credentials.";
+      } else if (isEmailInUse) {
+        msg = "This email is already in use. Please select Login instead.";
+      } else if (isWeakPass) {
+        msg = "Password should be at least 6 characters.";
+      } else if (err.message) {
+        msg = err.message;
+      }
+      setAuthError(msg);
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  };
+
   const handleDeliverySubmission = async (e: FormEvent) => {
     e.preventDefault();
     setDeliveryError("");
@@ -384,35 +466,59 @@ Here are my remaining details for delivery:
 
     setIsSyncingDelivery(true);
     try {
-      const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
-      const durationStr = `${startDate} to ${endDate} (${getDaysCount()} days)`;
-      const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
-      const discountStr = `₹${discount || 0}`;
+      // 1. Generate/retrieve the sequential Order ID via transition on metadata/orderCounter
+      let newOrderId = 1004;
+      try {
+        await runTransaction(db, async (transaction) => {
+          const counterRef = doc(db, "metadata", "orderCounter");
+          const counterDoc = await transaction.get(counterRef);
+          if (!counterDoc.exists()) {
+            newOrderId = 1004;
+            transaction.set(counterRef, { lastOrderId: 1004 });
+          } else {
+            const currentLastId = counterDoc.data().lastOrderId;
+            newOrderId = (currentLastId ? Number(currentLastId) : 1003) + 1;
+            transaction.update(counterRef, { lastOrderId: newOrderId });
+          }
+        });
+      } catch (transactionErr: any) {
+        console.error("Order counter transaction failed:", transactionErr);
+        throw transactionErr;
+      }
 
-      // 1. Upload file if selected
+      // 2. Upload KYC file to Firebase Storage with Order ID-based custom naming
       let fileUrl = "";
       if (selectedFile) {
-        const uniqueFolder = auth.currentUser?.uid || `guest_${Date.now()}`;
-        const storagePath = `kyc_uploads/${uniqueFolder}/${selectedFile.name}`;
+        const storagePath = `kyc_uploads/Order-${newOrderId}-KYC`;
         const storageRef = ref(storage, storagePath);
         const uploadResult = await uploadBytes(storageRef, selectedFile);
         fileUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // 2. Add document to Firestore 'orders' collection
-      await addDoc(collection(db, "orders"), {
-        name: deliveryName,
-        dates: durationStr,
-        transactionId: paymentDetails?.paymentId || "N/A",
-        location: deliveryLocation,
-        documentUrl: fileUrl,
-        email: deliveryEmail,
-        number: deliveryPhone,
-        totalPaid: totalPaidStr,
-        discount: discountStr,
-        assetsRent: bookingItemsStr,
-        createdAt: new Date().toISOString()
-      });
+      // 3. Save strict required keys to custom document ID 'Order-${newOrderId}' in orders collection
+      const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
+      const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
+      const discountStr = `₹${discount || 0}`;
+      const remainingAmtVal = Math.max(0, finalTotal - (paymentDetails?.amountPaid || calculatePaymentAmount()));
+      const remainingAmtStr = `₹${remainingAmtVal}`;
+
+      const payload = {
+        "Order ID": `Order-${newOrderId}`,
+        "Order Date": new Date().toISOString(),
+        "Name": deliveryName,
+        "Contact number": deliveryPhone,
+        "Email id": deliveryEmail,
+        "Assets": bookingItemsStr,
+        "Addon": paymentOption === "full" ? selectedVipPerk : "none",
+        "Paid amt": totalPaidStr,
+        "Start date": startDate || "",
+        "End date": endDate || "",
+        "Remaining amt": remainingAmtStr,
+        "Discount applied": discountStr,
+        "KYC Document URL": fileUrl
+      };
+
+      await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);
 
       setDeliverySynced(true);
     } catch (err: any) {
@@ -892,7 +998,96 @@ Here are my remaining details for delivery:
               </div>
 
               {/* Form Input Block */}
-              <form onSubmit={handleDeliverySubmission} className="space-y-6">
+              {!currentUser ? (
+                /* Embedded Authentication Mandate Portal */
+                <div id="checkout-mandatory-auth" className="space-y-6 border border-white/5 bg-black/45 p-6 rounded-3xl relative overflow-hidden backdrop-blur-md">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                    <div className="p-2.5 bg-afterhours-purple/15 text-afterhours-purple rounded-xl border border-afterhours-purple/35 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                      <Lock size={18} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-sm font-black uppercase tracking-wider text-white">Security Verification Required</h3>
+                      <p className="text-[10px] text-white/50 uppercase font-mono leading-none">Register or Sign-in to lock-in delivery coordinates</p>
+                    </div>
+                  </div>
+
+                  {/* Tab Selector */}
+                  <div className="grid grid-cols-2 gap-2 bg-black/50 p-1 rounded-xl border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => { setAuthFormMode("signup"); setAuthError(""); }}
+                      className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-pointer transition-all ${
+                        authFormMode === "signup" ? "bg-afterhours-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"
+                      }`}
+                    >
+                      <UserPlus size={10} className="inline mr-1" /> Sign Up
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAuthFormMode("login"); setAuthError(""); }}
+                      className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-pointer transition-all ${
+                        authFormMode === "login" ? "bg-afterhours-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"
+                      }`}
+                    >
+                      <LogIn size={10} className="inline mr-1" /> Log In
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleForcedAuthSubmission} className="space-y-4">
+                    {authFormMode === "signup" && (
+                      <div className="space-y-1.5 text-left">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={authName}
+                          onChange={(e) => setAuthName(e.target.value)}
+                          placeholder="Your full legal name"
+                          className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="e.g. name@domain.com"
+                        className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Secret Password</label>
+                      <input
+                        type="password"
+                        required
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                      />
+                    </div>
+
+                    {authError && (
+                      <p className="text-[11px] text-red-500 font-mono italic text-left">⚠️ {authError}</p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isAuthSubmitting}
+                      className="w-full py-4 mt-2 rounded-xl text-xs font-black uppercase tracking-[0.25em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-pink text-white hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {isAuthSubmitting && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {authFormMode === "signup" ? "Create Account & Unlock ➔" : "Authorize Session & Unlock ➔"}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <form onSubmit={handleDeliverySubmission} className="space-y-6">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-afterhours-purple tracking-widest block mb-3 font-mono">
                     Please Complete Required Fields
@@ -1021,6 +1216,7 @@ Here are my remaining details for delivery:
                   <span className="text-sm">💬</span> Having trouble? Send details via WhatsApp
                 </button>
               </form>
+              )}
 
               <div className="flex flex-col items-center border-t border-white/5 pt-4 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest">or skip register setup</span>

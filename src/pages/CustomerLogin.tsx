@@ -37,11 +37,16 @@ export function CustomerLogin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Auto-redirect if already logged in to profile page
+  // Auto-redirect if already logged in to profile page (or admin dashboard if admin)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        navigate("/profile");
+        const adminEmails = ["afterhoursrental@gmail.com", "arjuntiwari8604@gmail.com"];
+        if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/profile");
+        }
       }
     });
     return () => unsubscribe();
@@ -154,7 +159,8 @@ export function CustomerLogin() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password || (isSignUp && !name)) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password || (isSignUp && !name)) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -165,7 +171,7 @@ export function CustomerLogin() {
     try {
       if (isSignUp) {
         // Sign Up Mode
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
         const user = userCredential.user;
 
         // Update Auth Profile with Name
@@ -175,7 +181,7 @@ export function CustomerLogin() {
         const userRef = doc(db, "users", user.uid);
         await setDoc(userRef, {
           name: name,
-          email: email,
+          email: trimmedEmail,
           phone: "",
           address: "",
           kycUrl: "",
@@ -185,16 +191,65 @@ export function CustomerLogin() {
         });
       } else {
         // Log In Mode
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, trimmedEmail, password);
       }
       navigate("/profile");
     } catch (err: any) {
       console.error("Auth action failed:", err);
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+      const emailLower = trimmedEmail.toLowerCase();
+      const isAdminAccount = 
+        (emailLower === "afterhoursrental@gmail.com" && password === "Yara@2026") ||
+        (emailLower === "arjuntiwari8604@gmail.com" && password === "Ashu@8604");
+
+      const isInvalidCred = 
+        err.code === "auth/user-not-found" || 
+        err.code === "auth/wrong-password" || 
+        err.code === "auth/invalid-credential" || 
+        (err.message && (
+          err.message.includes("auth/invalid-credential") || 
+          err.message.includes("invalid-credential") || 
+          err.message.includes("user-not-found") || 
+          err.message.includes("wrong-password")
+        ));
+
+      if (isAdminAccount && isInvalidCred) {
+        try {
+          setIsLoading(true);
+          setError("Setting up operator profile...");
+          const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
+          const nameValue = emailLower === "afterhoursrental@gmail.com" ? "After Hours Rental Admin" : "Arjun Tiwari";
+          
+          await updateProfile(userCredential.user, { displayName: nameValue });
+          
+          const userRef = doc(db, "users", userCredential.user.uid);
+          await setDoc(userRef, {
+            name: nameValue,
+            email: emailLower,
+            phone: "",
+            address: "",
+          });
+
+          setError("");
+          navigate("/admin/dashboard");
+          return;
+        } catch (regErr: any) {
+          console.error("Failed to dynamically register admin account:", regErr);
+        }
+      }
+        
+      const isEmailInUse = 
+        err.code === "auth/email-already-in-use" ||
+        (err.message && err.message.includes("email-already-in-use"));
+
+      const isWeakPass = 
+        err.code === "auth/weak-password" ||
+        (err.message && err.message.includes("weak-password"));
+
+      if (isInvalidCred) {
         setError("Invalid credentials. Please verify your email and password.");
-      } else if (err.code === "auth/email-already-in-use") {
+      } else if (isEmailInUse) {
         setError("An account already exists with this email address.");
-      } else if (err.code === "auth/weak-password") {
+      } else if (isWeakPass) {
         setError("Your password should contain at least 6 characters.");
       } else {
         setError(err.message || "Authentication process failed. Please try again.");

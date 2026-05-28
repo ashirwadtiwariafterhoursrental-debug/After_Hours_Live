@@ -1,7 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
 import { motion } from "motion/react";
 import { KeyRound, Mail, AlertCircle, Loader2 } from "lucide-react";
 
@@ -12,19 +10,18 @@ export function AdminLogin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Auto-redirect if already logged in
+  // Auto-redirect admin to dashboard if already authenticated in local storage
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        navigate("/admin/dashboard");
-      }
-    });
-    return () => unsubscribe();
+    const isAdminAuthenticated = localStorage.getItem("isAdminAuthenticated") === "true";
+    if (isAdminAuthenticated) {
+      navigate("/admin/dashboard");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    const sanitizedEmail = email.trim();
+    if (!sanitizedEmail || !password) {
       setError("Please fill in all fields.");
       return;
     }
@@ -32,20 +29,23 @@ export function AdminLogin() {
     setError("");
     setIsLoading(true);
 
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/admin/dashboard");
-    } catch (err: any) {
-      console.error("Login failed:", err);
-      // Friendly, specific error message depending on code
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setError("Invalid email or password. Please verify your credentials.");
+    // Simulate a brief secure check delay
+    setTimeout(() => {
+      const emailLower = sanitizedEmail.toLowerCase();
+      const isValid =
+        (emailLower === "afterhoursrental@gmail.com" && password === "Yara@2026") ||
+        (emailLower === "arjuntiwari8604@gmail.com" && password === "Ashu@8604");
+
+      if (isValid) {
+        localStorage.setItem("isAdminAuthenticated", "true");
+        localStorage.setItem("adminEmail", emailLower);
+        setIsLoading(false);
+        navigate("/admin/dashboard");
       } else {
-        setError(err.message || "Authentication failed. Please try again.");
+        setError("Invalid email or password. Please verify your credentials.");
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    }, 600);
   };
 
   return (

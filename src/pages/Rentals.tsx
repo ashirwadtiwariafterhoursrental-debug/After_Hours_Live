@@ -2,12 +2,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Package, ArrowRight, CheckCircle2, Monitor, Gamepad2, 
   Speaker, Zap, ShieldCheck, Truck, ShoppingCart, Calendar, 
-  Tag, X, Plus, Minus
+  Tag, X, Plus, Minus, AlertTriangle, Loader2
 } from "lucide-react";
-import { useState, useMemo, useEffect, FormEvent, ReactNode } from "react";
+import { useState, useMemo, useEffect, FormEvent, ReactNode, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GearAssistant } from "@/src/components/sections/GearAssistant";
 import { fixedPriceCodes } from "../lib/fixedPriceCodes";
+import { db, handleFirestoreError, OperationType } from "../firebase";
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
 
 // --- Types ---
 interface RentalItem {
@@ -36,15 +38,6 @@ const RENTAL_ITEMS: RentalItem[] = [
     icon: <Monitor className="w-full h-full" />
   },
   {
-    id: "combo-racing",
-    name: "PS5 Mega Racing Combo",
-    price: 1999,
-    desc: "Includes Sony PS5 Console + Logitech G29 Driving Force Racing Wheel.",
-    category: "Combo",
-    isFeatured: true,
-    icon: <Zap className="w-full h-full" />
-  },
-  {
     id: "combo-party",
     name: "Full Party Setup",
     price: 1799,
@@ -54,26 +47,21 @@ const RENTAL_ITEMS: RentalItem[] = [
     icon: <Speaker className="w-full h-full" />
   },
   {
-    id: "hw-vr2",
-    name: "Sony PlayStation VR2",
-    price: 1599,
-    category: "Hardware",
+    id: "combo-racing",
+    name: "PS5 Mega Racing Combo",
+    price: 1999,
+    desc: "Includes Sony PS5 Console + Logitech G29 Driving Force Racing Wheel.",
+    category: "Combo",
+    isFeatured: true,
     icon: <Zap className="w-full h-full" />
   },
   {
     id: "hw-ps5",
-    name: "Sony PS5 Console",
+    name: "Play Station 5 ( PS5 console)",
     price: 1299,
     desc: "Includes standard controllers",
     category: "Hardware",
     icon: <Gamepad2 className="w-full h-full" />
-  },
-  {
-    id: "hw-wheel",
-    name: "Logitech G29 Racing Wheel",
-    price: 1199,
-    category: "Hardware",
-    icon: <Zap className="w-full h-full" />
   },
   {
     id: "hw-speaker",
@@ -88,6 +76,20 @@ const RENTAL_ITEMS: RentalItem[] = [
     price: 999,
     category: "Hardware",
     icon: <Monitor className="w-full h-full" />
+  },
+  {
+    id: "hw-vr2",
+    name: "Sony PlayStation VR2",
+    price: 1599,
+    category: "Hardware",
+    icon: <Zap className="w-full h-full" />
+  },
+  {
+    id: "hw-wheel",
+    name: "Logitech G29 Racing Wheel",
+    price: 1199,
+    category: "Hardware",
+    icon: <Zap className="w-full h-full" />
   }
 ];
 
@@ -184,6 +186,62 @@ export function Rentals() {
     phone: ""
   });
 
+  // --- Firebase Premium Games Subscription ---
+  const [premiumGames, setPremiumGames] = useState<any[]>([]);
+  useEffect(() => {
+    const q = query(collection(db, "premium_games"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      setPremiumGames(list);
+    }, (err) => {
+      console.error("Rentals error loading premium_games:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- Firebase Dynamic Gear Media Subscription ---
+  const [dynamicGearMedia, setDynamicGearMedia] = useState<Record<string, { mediaUrl: string; mediaType: "image" | "video" }>>({});
+  useEffect(() => {
+    const q = query(collection(db, "gear_catalog"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const mapping: Record<string, { mediaUrl: string; mediaType: "image" | "video" }> = {};
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.mediaUrl) {
+          mapping[doc.id] = {
+            mediaUrl: data.mediaUrl,
+            mediaType: data.mediaType || "image"
+          };
+        }
+      });
+      setDynamicGearMedia(mapping);
+    }, (err) => {
+      console.error("Rentals error loading gear_catalog media:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- Smart Cart Modal States ---
+  const [isSmartCartOpen, setIsSmartCartOpen] = useState(false);
+  const [smartCartItem, setSmartCartItem] = useState<RentalItem | null>(null);
+  const [addExtraController, setAddExtraController] = useState(false);
+  const [addProjectorScreen, setAddProjectorScreen] = useState(false);
+  const [selectedGameIds, setSelectedGameIds] = useState<string[]>([]);
+  const [isComboConverted, setIsComboConverted] = useState(false);
+
+  // --- Waitlist Modal States ---
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
+  const [waitlistItem, setWaitlistItem] = useState<RentalItem | null>(null);
+  const [waitlistName, setWaitlistName] = useState("");
+  const [waitlistContact, setWaitlistContact] = useState("");
+  const [waitlistDate, setWaitlistDate] = useState("");
+  const [isWaitlistSubmitting, setIsWaitlistSubmitting] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+  const [waitlistError, setWaitlistError] = useState("");
+
   // --- Calculations ---
   const activeOverrideCode = useMemo(() => {
     return activeCodes.find(code => code in fixedPriceCodes) || null;
@@ -200,6 +258,54 @@ export function Rentals() {
       return acc + (itemTotalPrice * item.quantity);
     }, 0);
   }, [cart, startDate, endDate]);
+
+  const isThresholdReached = useMemo(() => {
+    if (!smartCartItem) return subtotal >= 1600;
+    
+    const baseItemPrice = calculateItemPriceForDates(smartCartItem.price, startDate, endDate);
+    
+    // Estimate total with regular un-discounted addon rates (Controller @ 299, Screen @ 199, Games @ 199)
+    let extraControllerCost = addExtraController ? calculateItemPriceForDates(299, startDate, endDate) : 0;
+    let projectorScreenCost = addProjectorScreen ? calculateItemPriceForDates(199, startDate, endDate) : 0;
+    let comboCost = 0;
+    if (smartCartItem.id === "hw-ps5" && isComboConverted) {
+      const theatreCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      const theatrePrice = calculateItemPriceForDates(theatreCombo ? theatreCombo.price : 1999, startDate, endDate);
+      comboCost = (theatrePrice - baseItemPrice);
+    }
+    let gamesCost = selectedGameIds.length * calculateItemPriceForDates(199, startDate, endDate);
+    
+    const estimateTotal = subtotal + baseItemPrice + extraControllerCost + projectorScreenCost + comboCost + gamesCost;
+    return estimateTotal >= 1600;
+  }, [smartCartItem, isComboConverted, addExtraController, addProjectorScreen, selectedGameIds, subtotal, startDate, endDate]);
+
+  const prospectiveTotal = useMemo(() => {
+    if (!smartCartItem) return subtotal;
+    
+    const baseItemPrice = calculateItemPriceForDates(smartCartItem.price, startDate, endDate);
+    const controllerPrice = isThresholdReached ? 249 : 299;
+    const screenPrice = isThresholdReached ? 149 : 199;
+    const gamePrice = isThresholdReached ? 149 : 199;
+    
+    let optionsPrice = 0;
+    if (addExtraController) {
+      optionsPrice += calculateItemPriceForDates(controllerPrice, startDate, endDate);
+    }
+    
+    if (smartCartItem.id === "hw-ps5" && isComboConverted) {
+      const theatreCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      const theatrePrice = calculateItemPriceForDates(theatreCombo ? theatreCombo.price : 1999, startDate, endDate);
+      optionsPrice += (theatrePrice - baseItemPrice);
+    }
+    
+    if (addProjectorScreen) {
+      optionsPrice += calculateItemPriceForDates(screenPrice, startDate, endDate);
+    }
+    
+    const gamesPrice = selectedGameIds.length * calculateItemPriceForDates(gamePrice, startDate, endDate);
+    
+    return subtotal + baseItemPrice + optionsPrice + gamesPrice;
+  }, [smartCartItem, isComboConverted, addExtraController, addProjectorScreen, selectedGameIds, subtotal, startDate, endDate, isThresholdReached]);
 
   const deliveryFee = activeCodes.includes("FREEDELIVERY") ? 0 : 199;
 
@@ -253,6 +359,150 @@ export function Rentals() {
       }
       return [...prev, { ...item, quantity: 1 }];
     });
+    setIsCartOpen(true);
+  };
+
+  const openSmartCartModal = (item: RentalItem) => {
+    setSmartCartItem(item);
+    setAddExtraController(false);
+    setAddProjectorScreen(false);
+    setSelectedGameIds([]);
+    setIsComboConverted(false);
+    setIsSmartCartOpen(true);
+  };
+
+  const openWaitlistModal = (item: RentalItem) => {
+    setWaitlistItem(item);
+    setWaitlistName("");
+    setWaitlistContact("");
+    setWaitlistDate("");
+    setWaitlistSuccess(false);
+    setWaitlistError("");
+    setIsWaitlistOpen(true);
+  };
+
+  const handlePhantomAddToCart = async (item: RentalItem) => {
+    try {
+      const docRef = doc(db, "intent_clicks", item.id);
+      await setDoc(docRef, {
+        itemId: item.id,
+        itemName: item.name,
+        clicks: increment(1),
+        lastClicked: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Silent click track failed:", err);
+    }
+    openWaitlistModal(item);
+  };
+
+  const handleWaitlistSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setWaitlistError("");
+    if (!waitlistName.trim() || !waitlistContact.trim() || !waitlistDate) {
+      setWaitlistError("Please fill out all waitlist fields.");
+      return;
+    }
+    setIsWaitlistSubmitting(true);
+    try {
+      await addDoc(collection(db, "inventory_waitlist"), {
+        name: waitlistName.trim(),
+        contact: waitlistContact.trim(),
+        planDate: waitlistDate,
+        itemId: waitlistItem?.id || "unknown",
+        itemName: waitlistItem?.name || "Premium Gear",
+        createdAt: serverTimestamp()
+      });
+      setWaitlistSuccess(true);
+    } catch (error: any) {
+      console.error("Waitlist submit error:", error);
+      setWaitlistError("Error: " + error.message);
+    } finally {
+      setIsWaitlistSubmitting(false);
+    }
+  };
+
+  const handleSmartCartSubmit = () => {
+    if (!smartCartItem) return;
+
+    let itemsToAdd: RentalItem[] = [];
+
+    // Combo Converter Engine: stand-alone PS5 ("hw-ps5") + Smart Upsell: Add Projector ("isComboConverted" checked)
+    // merge into Gaming Theatre Combo ("combo-theatre")
+    if (smartCartItem.id === "hw-ps5" && isComboConverted) {
+      const theaterItem = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      if (theaterItem) {
+        itemsToAdd.push(theaterItem);
+      } else {
+        itemsToAdd.push(smartCartItem);
+      }
+    } else {
+      itemsToAdd.push(smartCartItem);
+    }
+
+    const activeControllerPrice = isThresholdReached ? 249 : 299;
+    const activeScreenPrice = isThresholdReached ? 149 : 199;
+    const activeGamePrice = isThresholdReached ? 149 : 199;
+
+    // Add extra controllers as addon item
+    if (addExtraController) {
+      itemsToAdd.push({
+        id: "addon-controller",
+        name: "Extra DualSense Controller (Addon)",
+        price: activeControllerPrice,
+        category: "Hardware",
+        icon: <Gamepad2 className="w-full h-full" />
+      });
+    }
+
+    // Add projector screen as addon item
+    if (addProjectorScreen) {
+      itemsToAdd.push({
+        id: "addon-screen",
+        name: "Projector Screen (Addon)",
+        price: activeScreenPrice,
+        category: "Hardware",
+        icon: <Monitor className="w-full h-full" />
+      });
+    }
+
+    selectedGameIds.forEach(gameId => {
+      const gameObj = premiumGames.find(g => g.id === gameId);
+      if (gameObj) {
+        itemsToAdd.push({
+          id: `addon-game-${gameObj.id}`,
+          name: `Premium Game: ${gameObj.title}`,
+          price: activeGamePrice,
+          category: "Hardware",
+          icon: <Gamepad2 className="w-full h-full" />
+        });
+      }
+    });
+
+    setCart(prev => {
+      let currentCart = [...prev];
+
+      itemsToAdd.forEach(item => {
+        // If we are adding Gaming Theatre Combo (due to conversion), clean up any separate standalone PS5 or Projectors already in cart
+        if (item.id === "combo-theatre") {
+          currentCart = currentCart.filter(c => c.id !== "hw-ps5" && c.id !== "hw-projector");
+        }
+
+        const existingIdx = currentCart.findIndex(c => c.id === item.id);
+        if (existingIdx > -1) {
+          currentCart[existingIdx] = {
+            ...currentCart[existingIdx],
+            quantity: currentCart[existingIdx].quantity + 1
+          };
+        } else {
+          currentCart.push({ ...item, quantity: 1 });
+        }
+      });
+
+      return currentCart;
+    });
+
+    setIsSmartCartOpen(false);
     setIsCartOpen(true);
   };
 
@@ -429,79 +679,125 @@ export function Rentals() {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {RENTAL_ITEMS.filter(i => i.isFeatured).map((combo, index) => (
-              <motion.div
-                key={combo.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="relative p-8 rounded-[2.5rem] bg-afterhours-charcoal border-2 border-afterhours-purple/20 hover:border-afterhours-purple transition-all group overflow-hidden neon-glow-purple"
-              >
-                <div className="aspect-video w-full bg-black/40 rounded-2xl mb-8 flex items-center justify-center p-12 text-afterhours-purple/40 group-hover:text-afterhours-purple transition-colors overflow-hidden relative">
-                  <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Zap className="w-full h-full scale-150 rotate-12" />
-                  </div>
-                  <div className="relative z-10 w-24 h-24">
-                    {combo.icon}
-                  </div>
-                </div>
-                
-                <h3 className="text-3xl font-black uppercase italic mb-2 leading-tight">{combo.name}</h3>
-                <p className="text-2xl font-black mb-4 text-afterhours-purple">₹{combo.price}/day</p>
-                <p className="text-white/50 text-sm mb-8 leading-relaxed h-12">{combo.desc}</p>
-                
-                <button 
-                  onClick={() => addToCart(combo)}
-                  className="w-full py-4 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+            {RENTAL_ITEMS.filter(i => i.isFeatured).map((combo, index) => {
+              const isWaitlistItem = combo.id === "combo-racing" || combo.id === "hw-vr2" || combo.id === "hw-wheel";
+              return (
+                <motion.div
+                  key={combo.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="relative p-8 rounded-[2.5rem] bg-afterhours-charcoal border-2 border-afterhours-purple/20 hover:border-afterhours-purple transition-all group overflow-hidden neon-glow-purple"
                 >
-                  Add to Cart ➔
-                </button>
-              </motion.div>
-            ))}
+                  <div className="aspect-video w-full bg-black/40 rounded-2xl mb-8 flex items-center justify-center p-12 text-afterhours-purple/40 group-hover:text-afterhours-purple transition-colors overflow-hidden relative">
+                    {dynamicGearMedia[combo.id] ? (
+                      dynamicGearMedia[combo.id].mediaType === "video" ? (
+                        <video src={dynamicGearMedia[combo.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
+                      ) : (
+                        <img src={dynamicGearMedia[combo.id].mediaUrl} alt={combo.name} className="absolute inset-0 w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
+                      )
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <Zap className="w-full h-full scale-150 rotate-12" />
+                        </div>
+                        <div className="relative z-10 w-24 h-24">
+                          {combo.icon}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <h3 className="text-3xl font-black uppercase italic mb-2 leading-tight">{combo.name}</h3>
+                  <p className="text-2xl font-black mb-4 text-afterhours-purple">₹{combo.price}/day</p>
+                  <p className="text-white/50 text-sm mb-8 leading-relaxed h-12">{combo.desc}</p>
+                  
+                  {isWaitlistItem ? (
+                    <button 
+                      onClick={() => handlePhantomAddToCart(combo)}
+                      className="w-full py-4 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 border border-white/5 shadow-lg"
+                    >
+                      ADD TO CART ➔
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => openSmartCartModal(combo)}
+                      className="w-full py-4 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      Add to Cart ➔
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
-        {/* A La Carte Hardware */}
+        {/* Premium Gears */}
         <section className="mb-32">
           <div className="flex items-center gap-4 mb-12">
             <div className="h-px flex-1 bg-white/10"></div>
-            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40">A La Carte Hardware</h2>
+            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40">Premium Gears</h2>
             <div className="h-px flex-1 bg-white/10"></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {RENTAL_ITEMS.filter(i => !i.isFeatured).map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                viewport={{ once: true }}
-                className="p-6 rounded-3xl bg-afterhours-charcoal border border-white/5 hover:border-white/20 transition-all group"
-              >
-                <div className="aspect-square w-full bg-black/40 rounded-2xl mb-6 flex items-center justify-center p-10 text-afterhours-cyan/40 group-hover:text-afterhours-cyan transition-colors overflow-hidden relative">
-                  <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Package className="w-full h-full scale-110" />
-                  </div>
-                  <div className="relative z-10 w-16 h-16">
-                    {item.icon}
-                  </div>
-                </div>
+            {RENTAL_ITEMS.filter(i => !i.isFeatured).map((item, index) => {
+              const isWaitlistItem = item.id === "combo-racing" || item.id === "hw-vr2" || item.id === "hw-wheel";
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  viewport={{ once: true }}
+                  className="p-6 rounded-3xl bg-afterhours-charcoal border border-white/5 hover:border-white/20 transition-all group lg:min-h-[350px] flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="aspect-square w-full bg-black/40 rounded-2xl mb-6 flex items-center justify-center p-10 text-afterhours-cyan/40 group-hover:text-afterhours-cyan transition-colors overflow-hidden relative">
+                      {dynamicGearMedia[item.id] ? (
+                        dynamicGearMedia[item.id].mediaType === "video" ? (
+                          <video src={dynamicGearMedia[item.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
+                        ) : (
+                          <img src={dynamicGearMedia[item.id].mediaUrl} alt={item.name} className="absolute inset-0 w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
+                        )
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Package className="w-full h-full scale-110" />
+                          </div>
+                          <div className="relative z-10 w-16 h-16">
+                            {item.icon}
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                <h3 className="text-lg font-bold uppercase italic mb-1">{item.name}</h3>
-                <p className="text-white/30 text-[10px] uppercase tracking-widest mb-4 h-8">{item.desc || "Premium Gear"}</p>
-                <div className="flex items-center justify-between mt-auto">
-                  <p className="text-afterhours-cyan font-black">₹{item.price}/day</p>
-                  <button 
-                    onClick={() => addToCart(item)}
-                    className="px-4 py-2 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95"
-                  >
-                    Add to Cart ➔
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                    <h3 className="text-lg font-bold uppercase italic mb-1">{item.name}</h3>
+                    <p className="text-white/30 text-[10px] uppercase tracking-widest mb-4 h-8">{item.desc || "Premium Gear"}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-4 gap-2">
+                    <p className="text-afterhours-cyan font-black text-sm shrink-0">₹{item.price}/day</p>
+                    {isWaitlistItem ? (
+                      <button 
+                        onClick={() => handlePhantomAddToCart(item)}
+                        className="px-4 py-2 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0 border border-white/5"
+                      >
+                        ADD TO CART
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => openSmartCartModal(item)}
+                        className="px-4 py-2 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0"
+                      >
+                        Add to Cart ➔
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
@@ -510,17 +806,22 @@ export function Rentals() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               { title: "Select Gear", icon: <Package size={32} /> },
-              { title: "Verify ID (Zero Deposit)", icon: <ShieldCheck size={32} /> },
+              { title: "Verify ID (Zero Deposit*)", icon: <ShieldCheck size={32} />, description: "*Zero deposit is only applicable upon verification via a valid corporate email address." },
               { title: "Doorstep Delivery & Setup", icon: <Truck size={32} /> }
             ].map((step, index) => (
-              <div key={step.title} className="text-center group">
-                <div className="w-20 h-20 mx-auto mb-8 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-afterhours-cyan group-hover:scale-110 transition-transform duration-500">
+              <div key={step.title} className="text-center group flex flex-col items-center">
+                <div className="w-20 h-20 mb-8 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-afterhours-cyan group-hover:scale-110 transition-transform duration-500">
                   {step.icon}
                 </div>
                 <h4 className="text-lg font-black uppercase tracking-widest mb-2">
                   <span className="text-white/20 mr-2">{index + 1}.</span>
                   {step.title}
                 </h4>
+                {step.description && (
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 max-w-[240px] mt-2 block leading-relaxed font-mono">
+                    {step.description}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -565,33 +866,45 @@ export function Rentals() {
                 <div className="space-y-4">
                   <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-4">Gear Selection Checklist</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {RENTAL_ITEMS.map(item => (
-                      <label
-                        key={item.id}
-                        className={`px-6 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-between ${
-                          cart.find(i => i.id === item.id)
-                            ? 'bg-white/10 border-afterhours-cyan text-white'
-                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input 
-                            type="checkbox" 
-                            className="hidden"
-                            checked={!!cart.find(i => i.id === item.id)}
-                            onChange={() => {
-                              if (cart.find(i => i.id === item.id)) {
-                                setCart(prev => prev.filter(i => i.id !== item.id));
-                              } else {
-                                addToCart(item);
-                              }
-                            }}
-                          />
-                          {item.name}
-                        </div>
-                        {cart.find(i => i.id === item.id) && <CheckCircle2 size={16} className="text-afterhours-cyan" />}
-                      </label>
-                    ))}
+                    {RENTAL_ITEMS.map(item => {
+                      const isWaitlistItem = item.id === "combo-racing" || item.id === "hw-vr2" || item.id === "hw-wheel";
+                      return (
+                        <label
+                          key={item.id}
+                          className={`px-6 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-between ${
+                            cart.find(i => i.id === item.id)
+                              ? 'bg-white/10 border-afterhours-cyan text-white'
+                              : isWaitlistItem
+                                ? 'bg-afterhours-pink/5 border-afterhours-pink/20 text-afterhours-pink hover:border-afterhours-pink/40'
+                                : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="checkbox" 
+                              className="hidden"
+                              checked={!!cart.find(i => i.id === item.id)}
+                              onChange={() => {
+                                if (isWaitlistItem) {
+                                  openWaitlistModal(item);
+                                  return;
+                                }
+                                if (cart.find(i => i.id === item.id)) {
+                                  setCart(prev => prev.filter(i => i.id !== item.id));
+                                } else {
+                                  openSmartCartModal(item);
+                                }
+                              }}
+                            />
+                            {item.name}
+                          </div>
+                          {cart.find(i => i.id === item.id) && <CheckCircle2 size={16} className="text-afterhours-cyan" />}
+                          {isWaitlistItem && !cart.find(i => i.id === item.id) && (
+                            <span className="text-[9px] font-black uppercase text-afterhours-pink px-2.5 py-0.5 rounded-full bg-afterhours-pink/10 border border-afterhours-pink/20">Waitlist</span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -777,6 +1090,415 @@ export function Rentals() {
           )}
         </div>
       </motion.button>
+
+      {/* --- TASK 3: WAITLIST MODAL --- */}
+      <AnimatePresence>
+        {isWaitlistOpen && waitlistItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Modal Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsWaitlistOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Body card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-[#121214] border border-afterhours-pink/30 rounded-[2.5rem] p-8 md:p-10 shadow-[0_0_50px_rgba(236,72,153,0.15)] overflow-hidden z-10"
+            >
+              {/* Pink spotlight ambient glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-afterhours-pink/10 blur-[60px] pointer-events-none rounded-full" />
+              
+              <div className="relative flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-afterhours-pink px-2.5 py-1 rounded-full bg-afterhours-pink/10 border border-afterhours-pink/20 mb-2.5 inline-block">
+                    ⚡ Demand High / Waitlist Active
+                  </span>
+                  <h3 className="text-2xl font-black uppercase italic text-white flex items-center gap-2">
+                    Queue: {waitlistItem.name}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsWaitlistOpen(false)}
+                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {waitlistSuccess ? (
+                <div className="space-y-6 text-center py-6">
+                  <div className="w-16 h-16 bg-afterhours-green/15 border border-afterhours-green text-afterhours-green rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                    ✓
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-black uppercase italic text-white">Signed up to Shadow Queue!</h4>
+                    <p className="text-xs text-white/60 leading-relaxed max-w-sm mx-auto">
+                      We've reserved your priority spot in the waitlist for <span className="text-afterhours-pink font-bold">{waitlistItem.name}</span>. Our concierge team will ping you via WhatsApp or Email as soon as this setup clears out from rent!
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsWaitlistOpen(false)}
+                    className="w-full py-4 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs transition-transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                  >
+                    Return to Catalog
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleWaitlistSubmit} className="space-y-6">
+                  <p className="text-xs text-white/50 leading-relaxed font-sans">
+                    Please submit your interest so we can notify you with a better offer.
+                  </p>
+
+                  {waitlistError && (
+                    <div className="p-4 bg-red-950/40 border border-red-500/20 rounded-2xl flex items-start gap-3">
+                      <AlertTriangle className="text-rose-450 mt-0.5" size={14} />
+                      <p className="text-xs text-rose-350 font-mono">{waitlistError}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Your Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Rachel Green"
+                        value={waitlistName}
+                        onChange={(e) => setWaitlistError("") || setWaitlistName(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white focus:outline-none focus:border-afterhours-pink transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Phone / Email Address</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. +91 98123 45678 or rachel@gmail.com"
+                        value={waitlistContact}
+                        onChange={(e) => setWaitlistContact(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white focus:outline-none focus:border-afterhours-pink transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">When were you planning to rent this?</label>
+                      <input
+                        type="date"
+                        required
+                        min={today}
+                        value={waitlistDate}
+                        onChange={(e) => setWaitlistDate(e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-mono text-white/80 focus:outline-none focus:border-afterhours-pink transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isWaitlistSubmitting}
+                    className="w-full py-4.5 bg-gradient-to-r from-afterhours-pink to-afterhours-purple text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-lg shadow-afterhours-pink/15 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-55 cursor-pointer"
+                  >
+                    {isWaitlistSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={14} />
+                        <span>Reserving shadow slot...</span>
+                      </span>
+                    ) : (
+                      "Join shadow queue ➔"
+                    )}
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- TASK 1: SMART CART MODAL --- */}
+      <AnimatePresence>
+        {isSmartCartOpen && smartCartItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Modal Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSmartCartOpen(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-sm"
+            />
+
+            {/* Modal Body card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              className="relative w-full max-w-2xl bg-[#0e0e10] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-y-auto max-h-[90vh] z-10"
+            >
+              {/* Cyan visual glow */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-afterhours-cyan/5 blur-[80px] pointer-events-none rounded-full" />
+              
+              <div className="relative flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-[0.25em] text-afterhours-cyan mb-1 inline-block">
+                    Interactive Set Configuration
+                  </span>
+                  <h3 className="text-3xl font-black uppercase italic text-white leading-none">
+                    Configure {smartCartItem.id === "hw-ps5" && isComboConverted ? "Gaming Theatre Combo" : smartCartItem.name}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsSmartCartOpen(false)}
+                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Core Item Inclusions list */}
+              <div className="space-y-3 mb-6 bg-white/[0.02] border border-white/5 rounded-2xl p-5">
+                <h4 className="text-[10px] font-black uppercase tracking-wider text-white/50">Base Package Inclusions:</h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/80">
+                  {(
+                    (smartCartItem.id === "hw-ps5" && isComboConverted 
+                      ? ["Sony PS5 Console", "2x DualSense Wireless Controllers", "Full HD 1080p Cinema Projector", "All HDMI & Power Cabling"]
+                      : {
+                          "combo-theatre": ["Sony PS5 Console", "2x DualSense Wireless Controllers", "Full HD 1080p Cinema Projector", "All HDMI & Power Cabling"],
+                          "combo-racing": ["Sony PS5 Console", "2x DualSense Wireless Controllers", "Logitech G29 Driving Force Wheel & Pedals Studio", "High-Performance Mount Rig"],
+                          "combo-party": ["Full HD 1085p Cinema Projector", "JBL PartyBox Professional Bluetooth Speaker", "Tripod Stand & Media Interface Cables"],
+                          "hw-vr2": ["Sony PlayStation VR2 Headset", "2x VR2 Sense Controllers", "Stereo Cinematic Earphones", "Secure VR Box"],
+                          "hw-ps5": ["Sony PS5 Console", "2x DualSense Wireless Controllers", "Heavy-Duty Power Cord & HDMI Cable"],
+                          "hw-wheel": ["Logitech G29 Driving Wheel Engine", "Anti-Slip Responsive Pedals Unit", "Desk Mount Clamps"],
+                          "hw-speaker": ["JBL PartyBox Speaker", "AUX Cables", "Speaker Stand"],
+                          "hw-projector": ["Full HD Projector", "Projector Screen Stand", "High-Speed HDMI Input Kit"]
+                        }[smartCartItem.id]
+                    ) || ["High Quality Premium Hardware Gear Rig", "Necessary cabling and standard setup manual"]
+                  ).map((inc, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="text-afterhours-cyan text-sm">✦</span>
+                      <span>{inc}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Setup constraints and Wifi warnings */}
+                {(smartCartItem.id.toLowerCase().includes("ps5") ||
+                  smartCartItem.id.toLowerCase().includes("projector") ||
+                  smartCartItem.id.toLowerCase().includes("theatre") ||
+                  smartCartItem.id.toLowerCase().includes("racing") ||
+                  smartCartItem.name.toLowerCase().includes("ps5") ||
+                  smartCartItem.name.toLowerCase().includes("projector")) && (
+                  <div className="mt-4 p-3.5 bg-afterhours-cyan/10 border border-afterhours-cyan/25 rounded-xl text-[11px] font-bold text-afterhours-cyan leading-relaxed flex items-center gap-2">
+                    <ShieldCheck size={14} className="shrink-0" />
+                    <span>⚠️ High-Speed Wi-Fi required for PS Deluxe Game Library and Multiplayer.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Enhance Your Setup Section */}
+              <div className="space-y-4 mb-6">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Enhance Your Experience</h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Extra Controllers Addon Option */}
+                  <div
+                    onClick={() => setAddExtraController(!addExtraController)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
+                      addExtraController
+                        ? "bg-afterhours-purple/10 border-afterhours-purple"
+                        : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={addExtraController}
+                      onChange={() => {}}
+                      className="mt-0.5 rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none"
+                    />
+                    <div>
+                      <h5 className="text-xs font-black uppercase text-white">Extra Wireless Controller</h5>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-white/40 line-through">~~₹599~~</span>
+                        <span className="text-[11px] text-afterhours-purple font-black">
+                          ₹{isThresholdReached ? 249 : 299}/day
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-white/50 mt-1">DualSense controller with haptic feedback</p>
+                    </div>
+                  </div>
+
+                  {/* Projector Tripod Screen option */}
+                  {(smartCartItem.id.includes("projector") || smartCartItem.id.includes("theatre") || isComboConverted) && (
+                    <div
+                      onClick={() => setAddProjectorScreen(!addProjectorScreen)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
+                        addProjectorScreen
+                          ? "bg-afterhours-cyan/10 border-afterhours-cyan"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={addProjectorScreen}
+                        onChange={() => {}}
+                        className="mt-0.5 rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none"
+                      />
+                      <div>
+                        <h5 className="text-xs font-black uppercase text-white">Projector Stand Screen</h5>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-white/40 line-through">~~₹499~~</span>
+                          <span className="text-[11px] text-afterhours-cyan font-black">
+                            ₹{isThresholdReached ? 149 : 199}/day
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-white/50 mt-1">High contrast 75-inch portable Projector Screen</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Smart Combo Converter: standalone PS5 triggers adding projector to convert to theater combo */}
+                  {smartCartItem.id === "hw-ps5" && (
+                    <div
+                      onClick={() => setIsComboConverted(!isComboConverted)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 col-span-1 sm:col-span-2 ${
+                        isComboConverted
+                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isComboConverted}
+                        onChange={() => {}}
+                        className="mt-1 rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h5 className="text-xs font-black uppercase text-white">Smart Upsell: Add cinema Projector Combo</h5>
+                          <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                            Save ₹399/day
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-white/60 leading-normal mt-1">
+                          Converts standalone PS5 and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just ₹999/day overall.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Game Pricing Block */}
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Bundle Unlock: Choose Premium Games</h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/40 font-mono">Each game:</span>
+                    <span className="text-[10px] text-white/30 line-through">~~₹499~~</span>
+                    <span className="text-xs text-afterhours-cyan font-black">₹{isThresholdReached ? 149 : 199}/day</span>
+                  </div>
+                </div>
+
+                {/* fetched games rendering */}
+                {premiumGames.length === 0 ? (
+                  <p className="text-[11px] text-white/45 italic pl-1 font-mono">No premium catalog games registered in system.</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {premiumGames.map((game) => {
+                      const isSelected = selectedGameIds.includes(game.id);
+                      return (
+                        <div
+                          key={game.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedGameIds(prev => prev.filter(id => id !== game.id));
+                            } else {
+                              setSelectedGameIds(prev => [...prev, game.id]);
+                            }
+                          }}
+                          className={`group p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between text-left select-none ${
+                            isSelected
+                              ? "bg-afterhours-purple/10 border-afterhours-purple/50"
+                              : "bg-white/[0.01] border-white/5 hover:border-white/10"
+                          }`}
+                        >
+                          <div className="aspect-[3/4] w-full bg-black/60 rounded-lg overflow-hidden mb-2 relative">
+                            <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-afterhours-purple/20 flex items-center justify-center backdrop-blur-[1px]">
+                                <span className="bg-afterhours-purple border border-white/20 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full scale-100 transition-transform">✓ Selected</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <h5 className="text-[10px] font-black text-white/90 uppercase tracking-widest line-clamp-1 truncate">{game.title}</h5>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[8px] text-white/30 line-through">~~₹499~~</span>
+                            <span className="text-[9px] text-afterhours-purple font-bold">₹{isThresholdReached ? 149 : 199}/day</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Progress bar and Target calculation logic */}
+                <div className="space-y-3 bg-white/[0.02] border border-white/5 rounded-2xl p-5 mt-4">
+                  <div className="flex justify-between text-xs font-black uppercase italic">
+                    <span>Prospective Cart Total:</span>
+                    <span className="text-white">₹{prospectiveTotal}</span>
+                  </div>
+
+                  {/* Simple Progress calculation */}
+                  {(() => {
+                    const progressVal = Math.min(100, (prospectiveTotal / 1600) * 100);
+                    const isUnlocked = prospectiveTotal >= 1600;
+                    return (
+                      <div className="space-y-2.5">
+                        <div className="w-full h-2.5 bg-black rounded-full overflow-hidden border border-white/5">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isUnlocked ? "bg-afterhours-green shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-afterhours-purple"
+                            }`}
+                            style={{ width: `${progressVal}%` }}
+                          />
+                        </div>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isUnlocked ? "text-afterhours-green" : "text-white/50"}`}>
+                          {isUnlocked ? (
+                            <span>🎉 UNLOCKED! Add-ons & Premium Games are now adjusted to maximum discount (Controller ₹249, Screen/Games ₹149)!</span>
+                          ) : (
+                            <span>Add ₹{1600 - prospectiveTotal} more to unlock Addon & Game discounts (Controller ₹249, Screen/Games ₹149, base <s>₹499/₹599</s>)!</span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Confirm submit buttons */}
+              <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4 justify-between">
+                <span className="text-[9px] font-mono uppercase text-white/40">
+                  Adds selections as combined setup additions
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSmartCartSubmit}
+                  className="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black font-black text-xs uppercase tracking-[0.2em] italic rounded-2xl transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-afterhours-cyan/10"
+                >
+                  Configure & Add Setup ➔
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

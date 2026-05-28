@@ -33,6 +33,40 @@ service cloud.firestore {
       allow update, delete: if isSignedIn(); // Only authorized administrators can alter or remove posts
     }
 
+    // Orders Collection MATCH
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // Site Images Collection MATCH
+    match /site_images/{imageId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Homepage Slides Collection MATCH
+    match /homepage_slides/{slideId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Premium Games Collection MATCH
+    match /premium_games/{gameId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Inventory Waitlist Collection MATCH
+    match /inventory_waitlist/{waitlistId} {
+      allow create: if true;
+      allow read, update, delete: if isSignedIn();
+    }
+
+    // Metadata Collection MATCH
+    match /metadata/{metaId} {
+      allow read, write: if true;
+    }
+
     // Users & KYC Profiles Collection MATCH
     match /users/{userId} {
       allow read: if isSignedIn() && request.auth.uid == userId;

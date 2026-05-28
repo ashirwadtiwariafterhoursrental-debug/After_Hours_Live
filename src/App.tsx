@@ -13,6 +13,7 @@ import { AdminLogin } from "./pages/AdminLogin";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { CustomerLogin } from "./pages/CustomerLogin";
 import { CustomerProfile } from "./pages/CustomerProfile";
+import { ProtectedAdminRoute } from "./components/ProtectedAdminRoute";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -37,7 +38,11 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={
+            <ProtectedAdminRoute>
+              <AdminDashboard />
+            </ProtectedAdminRoute>
+          } />
           <Route path="/customer-login" element={<CustomerLogin />} />
           <Route path="/profile" element={<CustomerProfile />} />
         </Routes>
