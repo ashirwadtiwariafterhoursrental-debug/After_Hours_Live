@@ -515,7 +515,10 @@ Here are my remaining details for delivery:
         "End date": endDate || "",
         "Remaining amt": remainingAmtStr,
         "Discount applied": discountStr,
-        "KYC Document URL": fileUrl
+        "KYC Document URL": fileUrl,
+        "location": deliveryLocation,
+        "locationLink": deliveryLocation,
+        "address": deliveryLocation
       };
 
       await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);

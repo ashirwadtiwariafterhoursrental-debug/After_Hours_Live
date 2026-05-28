@@ -2,7 +2,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Package, ArrowRight, Monitor, Gamepad2, 
   Speaker, Zap, ShieldCheck, Truck, ShoppingCart, Calendar, 
-  Tag, X, Plus, Minus, AlertTriangle, Loader2
+  Tag, X, Plus, Minus, AlertTriangle, Loader2, Disc,
+  Mic, Maximize, Play, Image
 } from "lucide-react";
 import { useState, useMemo, useEffect, FormEvent, ReactNode, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -224,13 +225,57 @@ export function Rentals() {
     return () => unsubscribe();
   }, []);
 
+  // --- Firebase Addon Media Subscription ---
+  const [addonMedia, setAddonMedia] = useState<Record<string, { photoUrl: string; videoUrl: string }>>({});
+  useEffect(() => {
+    const q = query(collection(db, "addon_media"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const mapping: Record<string, { photoUrl: string; videoUrl: string }> = {};
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.photoUrl || data.videoUrl) {
+          mapping[doc.id] = {
+            photoUrl: data.photoUrl || "",
+            videoUrl: data.videoUrl || ""
+          };
+        }
+      });
+      setAddonMedia(mapping);
+    }, (err) => {
+      console.error("Rentals error loading addon_media:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const renderAddonMediaPreview = (addonName: string) => {
+    const media = addonMedia[addonName];
+    if (!media || (!media.photoUrl && !media.videoUrl)) {
+      return (
+        <div className="w-20 h-20 rounded-2xl bg-white/[0.01] border border-white/5 flex items-center justify-center text-white/20 shrink-0">
+          <Image size={16} />
+        </div>
+      );
+    }
+    return (
+      <AddonHoverPlayer 
+        photoUrl={media.photoUrl} 
+        videoUrl={media.videoUrl} 
+        addonName={addonName} 
+      />
+    );
+  };
+
   // --- Smart Cart Modal States ---
   const [isSmartCartOpen, setIsSmartCartOpen] = useState(false);
   const [smartCartItem, setSmartCartItem] = useState<RentalItem | null>(null);
   const [addExtraController, setAddExtraController] = useState(false);
   const [addProjectorScreen, setAddProjectorScreen] = useState(false);
+  const [addHeavyDutyTripod, setAddHeavyDutyTripod] = useState(false);
+  const [addWirelessMic, setAddWirelessMic] = useState(false);
+  const [addMetaShotsBat, setAddMetaShotsBat] = useState(false);
   const [selectedGameIds, setSelectedGameIds] = useState<string[]>([]);
   const [isComboConverted, setIsComboConverted] = useState(false);
+  const [isComboConverted2, setIsComboConverted2] = useState(false);
 
   // --- Waitlist Modal States ---
   const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
@@ -264,20 +309,36 @@ export function Rentals() {
     
     const baseItemPrice = calculateItemPriceForDates(smartCartItem.price, startDate, endDate);
     
-    // Estimate total with regular un-discounted addon rates (Controller @ 299, Screen @ 199, Games @ 199)
+    // Estimate total with regular un-discounted addon rates (Controller @ 299, Screen @ 199, Tripod @ 199, Mic @ 299, Bat @ 299)
     let extraControllerCost = addExtraController ? calculateItemPriceForDates(299, startDate, endDate) : 0;
     let projectorScreenCost = addProjectorScreen ? calculateItemPriceForDates(199, startDate, endDate) : 0;
+    let tripodCost = addHeavyDutyTripod ? calculateItemPriceForDates(199, startDate, endDate) : 0;
+    let micCost = addWirelessMic ? calculateItemPriceForDates(299, startDate, endDate) : 0;
+    let batCost = addMetaShotsBat ? calculateItemPriceForDates(299, startDate, endDate) : 0;
+    let gamesCost = selectedGameIds.length * calculateItemPriceForDates(199, startDate, endDate);
+    
     let comboCost = 0;
     if (smartCartItem.id === "hw-ps5" && isComboConverted) {
       const theatreCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
       const theatrePrice = calculateItemPriceForDates(theatreCombo ? theatreCombo.price : 1999, startDate, endDate);
       comboCost = (theatrePrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-speaker" && isComboConverted) {
+      const partyCombo = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      const partyPrice = calculateItemPriceForDates(partyCombo ? partyCombo.price : 1799, startDate, endDate);
+      comboCost = (partyPrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted) {
+      const theaterCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      const theaterPrice = calculateItemPriceForDates(theaterCombo ? theaterCombo.price : 1999, startDate, endDate);
+      comboCost = (theaterPrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted2) {
+      const partyCombo = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      const partyPrice = calculateItemPriceForDates(partyCombo ? partyCombo.price : 1799, startDate, endDate);
+      comboCost = (partyPrice - baseItemPrice);
     }
-    let gamesCost = selectedGameIds.length * calculateItemPriceForDates(199, startDate, endDate);
     
-    const estimateTotal = subtotal + baseItemPrice + extraControllerCost + projectorScreenCost + comboCost + gamesCost;
+    const estimateTotal = subtotal + baseItemPrice + extraControllerCost + projectorScreenCost + tripodCost + micCost + batCost + comboCost + gamesCost;
     return estimateTotal >= 1600;
-  }, [smartCartItem, isComboConverted, addExtraController, addProjectorScreen, selectedGameIds, subtotal, startDate, endDate]);
+  }, [smartCartItem, isComboConverted, isComboConverted2, addExtraController, addProjectorScreen, addHeavyDutyTripod, addWirelessMic, addMetaShotsBat, selectedGameIds, subtotal, startDate, endDate]);
 
   const prospectiveTotal = useMemo(() => {
     if (!smartCartItem) return subtotal;
@@ -286,6 +347,9 @@ export function Rentals() {
     const controllerPrice = isThresholdReached ? 249 : 299;
     const screenPrice = isThresholdReached ? 149 : 199;
     const gamePrice = isThresholdReached ? 149 : 199;
+    const tripodPrice = isThresholdReached ? 149 : 199;
+    const micPrice = isThresholdReached ? 199 : 299;
+    const batPrice = isThresholdReached ? 199 : 299;
     
     let optionsPrice = 0;
     if (addExtraController) {
@@ -296,16 +360,37 @@ export function Rentals() {
       const theatreCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
       const theatrePrice = calculateItemPriceForDates(theatreCombo ? theatreCombo.price : 1999, startDate, endDate);
       optionsPrice += (theatrePrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-speaker" && isComboConverted) {
+      const partyCombo = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      const partyPrice = calculateItemPriceForDates(partyCombo ? partyCombo.price : 1799, startDate, endDate);
+      optionsPrice += (partyPrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted) {
+      const theaterCombo = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      const theaterPrice = calculateItemPriceForDates(theaterCombo ? theaterCombo.price : 1999, startDate, endDate);
+      optionsPrice += (theaterPrice - baseItemPrice);
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted2) {
+      const partyCombo = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      const partyPrice = calculateItemPriceForDates(partyCombo ? partyCombo.price : 1799, startDate, endDate);
+      optionsPrice += (partyPrice - baseItemPrice);
     }
     
     if (addProjectorScreen) {
       optionsPrice += calculateItemPriceForDates(screenPrice, startDate, endDate);
     }
+    if (addHeavyDutyTripod) {
+      optionsPrice += calculateItemPriceForDates(tripodPrice, startDate, endDate);
+    }
+    if (addWirelessMic) {
+      optionsPrice += calculateItemPriceForDates(micPrice, startDate, endDate);
+    }
+    if (addMetaShotsBat) {
+      optionsPrice += calculateItemPriceForDates(batPrice, startDate, endDate);
+    }
     
     const gamesPrice = selectedGameIds.length * calculateItemPriceForDates(gamePrice, startDate, endDate);
     
     return subtotal + baseItemPrice + optionsPrice + gamesPrice;
-  }, [smartCartItem, isComboConverted, addExtraController, addProjectorScreen, selectedGameIds, subtotal, startDate, endDate, isThresholdReached]);
+  }, [smartCartItem, isComboConverted, isComboConverted2, addExtraController, addProjectorScreen, addHeavyDutyTripod, addWirelessMic, addMetaShotsBat, selectedGameIds, subtotal, startDate, endDate, isThresholdReached]);
 
   const deliveryFee = activeCodes.includes("FREEDELIVERY") ? 0 : 199;
 
@@ -366,8 +451,12 @@ export function Rentals() {
     setSmartCartItem(item);
     setAddExtraController(false);
     setAddProjectorScreen(false);
+    setAddHeavyDutyTripod(false);
+    setAddWirelessMic(false);
+    setAddMetaShotsBat(false);
     setSelectedGameIds([]);
     setIsComboConverted(false);
+    setIsComboConverted2(false);
     setIsSmartCartOpen(true);
   };
 
@@ -427,12 +516,32 @@ export function Rentals() {
 
     let itemsToAdd: RentalItem[] = [];
 
-    // Combo Converter Engine: stand-alone PS5 ("hw-ps5") + Smart Upsell: Add Projector ("isComboConverted" checked)
-    // merge into Gaming Theatre Combo ("combo-theatre")
+    // Dual Combo Converters logic
     if (smartCartItem.id === "hw-ps5" && isComboConverted) {
       const theaterItem = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
       if (theaterItem) {
         itemsToAdd.push(theaterItem);
+      } else {
+        itemsToAdd.push(smartCartItem);
+      }
+    } else if (smartCartItem.id === "hw-speaker" && isComboConverted) {
+      const partyItem = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      if (partyItem) {
+        itemsToAdd.push(partyItem);
+      } else {
+        itemsToAdd.push(smartCartItem);
+      }
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted) {
+      const theaterItem = RENTAL_ITEMS.find(i => i.id === "combo-theatre");
+      if (theaterItem) {
+        itemsToAdd.push(theaterItem);
+      } else {
+        itemsToAdd.push(smartCartItem);
+      }
+    } else if (smartCartItem.id === "hw-projector" && isComboConverted2) {
+      const partyItem = RENTAL_ITEMS.find(i => i.id === "combo-party");
+      if (partyItem) {
+        itemsToAdd.push(partyItem);
       } else {
         itemsToAdd.push(smartCartItem);
       }
@@ -442,6 +551,9 @@ export function Rentals() {
 
     const activeControllerPrice = isThresholdReached ? 249 : 299;
     const activeScreenPrice = isThresholdReached ? 149 : 199;
+    const activeTripodPrice = isThresholdReached ? 149 : 199;
+    const activeMicPrice = isThresholdReached ? 199 : 299;
+    const activeBatPrice = isThresholdReached ? 199 : 299;
     const activeGamePrice = isThresholdReached ? 149 : 199;
 
     // Add extra controllers as addon item
@@ -466,6 +578,39 @@ export function Rentals() {
       });
     }
 
+    // Add tripod as addon item
+    if (addHeavyDutyTripod) {
+      itemsToAdd.push({
+        id: "addon-tripod",
+        name: "Heavy Duty Tripod (Addon)",
+        price: activeTripodPrice,
+        category: "Hardware",
+        icon: <Maximize className="w-full h-full" />
+      });
+    }
+
+    // Add wireless mic as addon item
+    if (addWirelessMic) {
+      itemsToAdd.push({
+        id: "addon-mic",
+        name: "Wireless Mic (Addon)",
+        price: activeMicPrice,
+        category: "Hardware",
+        icon: <Mic className="w-full h-full" />
+      });
+    }
+
+    // Add meta shots bat as addon item
+    if (addMetaShotsBat) {
+      itemsToAdd.push({
+        id: "addon-bat",
+        name: "Meta Shots Bat (Addon)",
+        price: activeBatPrice,
+        category: "Hardware",
+        icon: <Zap className="w-full h-full" />
+      });
+    }
+
     selectedGameIds.forEach(gameId => {
       const gameObj = premiumGames.find(g => g.id === gameId);
       if (gameObj) {
@@ -483,9 +628,13 @@ export function Rentals() {
       let currentCart = [...prev];
 
       itemsToAdd.forEach(item => {
-        // If we are adding Gaming Theatre Combo (due to conversion), clean up any separate standalone PS5 or Projectors already in cart
+        // If we are adding Gaming Theatre Combo (due to conversion), clean up standalone parts
         if (item.id === "combo-theatre") {
           currentCart = currentCart.filter(c => c.id !== "hw-ps5" && c.id !== "hw-projector");
+        }
+        // If we are adding Party Combo, clean up speaker and projector
+        if (item.id === "combo-party") {
+          currentCart = currentCart.filter(c => c.id !== "hw-speaker" && c.id !== "hw-projector");
         }
 
         const existingIdx = currentCart.findIndex(c => c.id === item.id);
@@ -1257,108 +1406,368 @@ export function Rentals() {
               </div>
 
               {/* Enhance Your Setup Section */}
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4 mb-6 text-left">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Enhance Your Experience</h4>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Extra Controllers Addon Option */}
-                  <div
-                    onClick={() => setAddExtraController(!addExtraController)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
-                      addExtraController
-                        ? "bg-afterhours-purple/10 border-afterhours-purple"
-                        : "bg-white/[0.02] border-white/5 hover:border-white/10"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={addExtraController}
-                      onChange={() => {}}
-                      className="mt-0.5 rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none"
-                    />
-                    <div>
-                      <h5 className="text-xs font-black uppercase text-white">Extra Wireless Controller</h5>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] text-white/40 line-through">~~₹599~~</span>
-                        <span className="text-[11px] text-afterhours-purple font-black">
-                          ₹{isThresholdReached ? 249 : 299}/day
-                        </span>
-                      </div>
-                      <p className="text-[9px] text-white/50 mt-1">DualSense controller with haptic feedback</p>
-                    </div>
-                  </div>
-
-                  {/* Projector Tripod Screen option */}
-                  {(smartCartItem.id.includes("projector") || smartCartItem.id.includes("theatre") || isComboConverted) && (
+                  {(smartCartItem.id === "hw-ps5" || smartCartItem.id === "combo-theatre") && (
                     <div
-                      onClick={() => setAddProjectorScreen(!addProjectorScreen)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 ${
-                        addProjectorScreen
-                          ? "bg-afterhours-cyan/10 border-afterhours-cyan"
+                      onClick={() => setAddExtraController(!addExtraController)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
+                        addExtraController
+                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
                           : "bg-white/[0.02] border-white/5 hover:border-white/10"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={addProjectorScreen}
-                        onChange={() => {}}
-                        className="mt-0.5 rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none"
-                      />
-                      <div>
-                        <h5 className="text-xs font-black uppercase text-white">Projector Stand Screen</h5>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-white/40 line-through">~~₹499~~</span>
-                          <span className="text-[11px] text-afterhours-cyan font-black">
-                            ₹{isThresholdReached ? 149 : 199}/day
-                          </span>
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                          <Gamepad2 size={18} />
                         </div>
-                        <p className="text-[9px] text-white/50 mt-1">High contrast 75-inch portable Projector Screen</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Extra Controller</h5>
+                            <input
+                              type="checkbox"
+                              checked={addExtraController}
+                              onChange={() => {}}
+                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xs text-white/40 line-through font-bold">₹599</span>
+                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                              ₹{isThresholdReached ? 249 : 299}/day
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-white/50 mt-1 leading-normal">DualSense controller with haptic feedback</p>
+                        </div>
+                      </div>
+                      
+                      {/* Media Preview Box */}
+                      {renderAddonMediaPreview("Extra Controller")}
+                    </div>
+                  )}
+
+                  {/* Projector Screen option */}
+                  {(smartCartItem.id === "hw-projector" || smartCartItem.id === "combo-theatre" || smartCartItem.id === "combo-party") && (
+                    <div
+                      onClick={() => setAddProjectorScreen(!addProjectorScreen)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
+                        addProjectorScreen
+                          ? "bg-afterhours-cyan/15 border-afterhours-cyan/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                          <Monitor size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Projector Screen</h5>
+                            <input
+                              type="checkbox"
+                              checked={addProjectorScreen}
+                              onChange={() => {}}
+                              className="rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#90e0d0] font-black tracking-tight">
+                              ₹{isThresholdReached ? 149 : 199}/day
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-white/50 mt-1 leading-normal">High contrast 75-inch portable Projector Screen</p>
+                        </div>
+                      </div>
+
+                      {/* Media Preview Box */}
+                      {renderAddonMediaPreview("Projector Screen")}
+                    </div>
+                  )}
+
+                  {/* Heavy Duty Tripod Addon Option */}
+                  {(smartCartItem.id === "hw-projector" || smartCartItem.id === "combo-theatre" || smartCartItem.id === "combo-party") && (
+                    <div
+                      onClick={() => setAddHeavyDutyTripod(!addHeavyDutyTripod)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
+                        addHeavyDutyTripod
+                          ? "bg-afterhours-cyan/15 border-afterhours-cyan/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                          <Maximize size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Heavy Duty Tripod</h5>
+                            <input
+                              type="checkbox"
+                              checked={addHeavyDutyTripod}
+                              onChange={() => {}}
+                              className="rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#90e0d0] font-black tracking-tight">
+                              ₹{isThresholdReached ? 149 : 199}/day
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Ultra sturdy camera/projector telescoping stand</p>
+                        </div>
+                      </div>
+
+                      {/* Media Preview Box */}
+                      {renderAddonMediaPreview("Heavy Duty Tripod")}
+                    </div>
+                  )}
+
+                  {/* Wireless Mic Addon Option */}
+                  {(smartCartItem.id === "hw-speaker" || smartCartItem.id === "combo-party") && (
+                    <div
+                      onClick={() => setAddWirelessMic(!addWirelessMic)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
+                        addWirelessMic
+                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                          <Mic size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Wireless Mic</h5>
+                            <input
+                              type="checkbox"
+                              checked={addWirelessMic}
+                              onChange={() => {}}
+                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                              ₹{isThresholdReached ? 199 : 299}/day
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Professional vocal wireless microphone unit</p>
+                        </div>
+                      </div>
+
+                      {/* Media Preview Box */}
+                      {renderAddonMediaPreview("Wireless Mic")}
+                    </div>
+                  )}
+
+                  {/* Meta Shots Bat Addon Option */}
+                  {(smartCartItem.id === "hw-ps5" || smartCartItem.id === "combo-theatre") && (
+                    <div
+                      onClick={() => setAddMetaShotsBat(!addMetaShotsBat)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
+                        addMetaShotsBat
+                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                          <Zap size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Meta Shots Bat</h5>
+                            <input
+                              type="checkbox"
+                              checked={addMetaShotsBat}
+                              onChange={() => {}}
+                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                              ₹{isThresholdReached ? 199 : 299}/day
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Premium VR physical cricket bat accessory</p>
+                        </div>
+                      </div>
+
+                      {/* Media Preview Box */}
+                      {renderAddonMediaPreview("Meta Shots Bat")}
+                    </div>
+                  )}
+
+                  {/* Smart Combo Converter for standalone Speaker */}
+                  {smartCartItem.id === "hw-speaker" && (
+                    <div
+                      onClick={() => setIsComboConverted(!isComboConverted)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
+                        isComboConverted
+                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <Zap size={18} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add cinema Projector Combo</h5>
+                            <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                              Save ₹399/day
+                            </span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isComboConverted}
+                            onChange={() => {}}
+                            className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                          />
+                        </div>
+                        <p className="text-[10px] text-white/60 leading-normal mt-1">
+                          Converts standalone JBL Speaker and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Full Party Setup Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1799/day</span> overall.
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Smart Combo Converter: standalone PS5 triggers adding projector to convert to theater combo */}
+                  {/* Smart Combo Converter for standalone PS5 */}
                   {smartCartItem.id === "hw-ps5" && (
                     <div
                       onClick={() => setIsComboConverted(!isComboConverted)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3 col-span-1 sm:col-span-2 ${
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
                         isComboConverted
-                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan"
+                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
                           : "bg-white/[0.02] border-white/5 hover:border-white/10"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isComboConverted}
-                        onChange={() => {}}
-                        className="mt-1 rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none"
-                      />
+                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <Zap size={18} />
+                      </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h5 className="text-xs font-black uppercase text-white">Smart Upsell: Add cinema Projector Combo</h5>
-                          <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
-                            Save ₹399/day
-                          </span>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add cinema Projector Combo</h5>
+                            <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                              Save ₹299/day
+                            </span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isComboConverted}
+                            onChange={() => {}}
+                            className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                          />
                         </div>
                         <p className="text-[10px] text-white/60 leading-normal mt-1">
-                          Converts standalone PS5 and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just ₹999/day overall.
+                          Converts standalone PS5 and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1999/day</span> overall.
                         </p>
                       </div>
                     </div>
+                  )}
+
+                  {/* Smart Combo Converter for standalone Projector */}
+                  {smartCartItem.id === "hw-projector" && (
+                    <>
+                      <div
+                        onClick={() => {
+                          setIsComboConverted(!isComboConverted);
+                          setIsComboConverted2(false);
+                        }}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
+                          isComboConverted
+                            ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                        }`}
+                      >
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                          <Zap size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add PS5 Combo</h5>
+                              <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                                Save ₹299/day
+                              </span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isComboConverted}
+                              onChange={() => {}}
+                              className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <p className="text-[10px] text-white/60 leading-normal mt-1">
+                            Converts standalone Projector setup and PS5 into our immersive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1999/day</span> overall.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          setIsComboConverted2(!isComboConverted2);
+                          setIsComboConverted(false);
+                        }}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
+                          isComboConverted2
+                            ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                        }`}
+                      >
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                          <Zap size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add JBL Speaker Combo</h5>
+                              <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                                Save ₹399/day
+                              </span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isComboConverted2}
+                              onChange={() => {}}
+                              className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                            />
+                          </div>
+                          <p className="text-[10px] text-white/60 leading-normal mt-1">
+                            Converts standalone Projector and Speaker setup into <span className="text-afterhours-cyan font-bold">Full Party Setup Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1799/day</span> overall.
+                          </p>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
 
               {/* Dynamic Game Pricing Block */}
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between items-center bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Bundle Unlock: Choose Premium Games</h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/40 font-mono">Each game:</span>
-                    <span className="text-[10px] text-white/30 line-through">~~₹499~~</span>
-                    <span className="text-xs text-afterhours-cyan font-black">₹{isThresholdReached ? 149 : 199}/day</span>
+              {(smartCartItem.id === "hw-ps5" || smartCartItem.id === "combo-theatre") && (
+                <div className="space-y-4 mb-8 text-left">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                        <Disc size={18} />
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-[0.15em] text-white">Bundle Unlock: Choose Premium Games</h4>
+                    </div>
+                    <div className="flex items-center gap-3 font-sans">
+                      <span className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Promo price:</span>
+                      <span className="text-xs text-white/40 line-through font-bold">₹499</span>
+                      <span className="text-base sm:text-lg text-afterhours-cyan font-black">₹{isThresholdReached ? 149 : 199}/day</span>
+                    </div>
                   </div>
-                </div>
 
                 {/* fetched games rendering */}
                 {premiumGames.length === 0 ? (
@@ -1402,6 +1811,8 @@ export function Rentals() {
                     })}
                   </div>
                 )}
+              </div>
+            )}
 
                 {/* Progress bar and Target calculation logic */}
                 <div className="space-y-3 bg-white/[0.02] border border-white/5 rounded-2xl p-5 mt-4">
@@ -1435,7 +1846,6 @@ export function Rentals() {
                     );
                   })()}
                 </div>
-              </div>
 
               {/* Confirm submit buttons */}
               <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4 justify-between">
@@ -1454,6 +1864,53 @@ export function Rentals() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function AddonHoverPlayer({ photoUrl, videoUrl, addonName }: { photoUrl: string; videoUrl: string; addonName: string }) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+      className="relative w-20 h-20 rounded-2xl overflow-hidden bg-black/50 border border-white/10 shrink-0 transition-transform duration-300 hover:scale-[1.03]"
+    >
+      {videoUrl && isHovered ? (
+        <video
+          src={videoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={addonName}
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/20 bg-white/[0.02]">
+            <Image size={16} />
+          </div>
+        )
+      )}
+
+      {videoUrl && !isHovered && (
+        <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+          <div className="p-1 px-1.5 bg-afterhours-cyan/85 backdrop-blur-sm rounded-full text-black shadow-lg flex items-center gap-1 scale-90">
+            <Play size={8} className="fill-current" />
+            <span className="text-[8px] font-black uppercase tracking-wider font-mono">DEMO</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

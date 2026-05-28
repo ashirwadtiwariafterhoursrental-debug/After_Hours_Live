@@ -5,13 +5,15 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc } from "firebase/firestore";
 import { auth, db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
-import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye } from "lucide-react";
+import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play } from "lucide-react";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
   const slideFileInputRef = useRef<HTMLInputElement>(null);
+  const addonPhotoInputRef = useRef<HTMLInputElement>(null);
+  const addonVideoInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -39,16 +41,24 @@ export function AdminDashboard() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form states - Website Asset Manager
-  const [assetCategory, setAssetCategory] = useState<"Combos" | "Individual Gears">("Combos");
+  const [assetCategory, setAssetCategory] = useState<"Combos" | "Individual Gears" | "Add-ons">("Combos");
   const [selectedAssetId, setSelectedAssetId] = useState<string>("combo-theatre");
   const [assetPhoto, setAssetPhoto] = useState<File | null>(null);
   const [assetPhotoPreview, setAssetPhotoPreview] = useState<string | null>(null);
 
+  // Form states - Addon preview assets (preview photo and video)
+  const [addonPhoto, setAddonPhoto] = useState<File | null>(null);
+  const [addonPhotoPreview, setAddonPhotoPreview] = useState<string | null>(null);
+  const [addonVideo, setAddonVideo] = useState<File | null>(null);
+  const [addonVideoPreview, setAddonVideoPreview] = useState<string | null>(null);
+
   useEffect(() => {
     if (assetCategory === "Combos") {
       setSelectedAssetId("combo-theatre");
-    } else {
+    } else if (assetCategory === "Individual Gears") {
       setSelectedAssetId("hw-ps5");
+    } else if (assetCategory === "Add-ons") {
+      setSelectedAssetId("Extra Controller");
     }
   }, [assetCategory]);
 
@@ -417,53 +427,96 @@ export function AdminDashboard() {
     e.preventDefault();
     setAssetFormError("");
 
-    if (!assetPhoto) {
-      setAssetFormError("Please upload a photo for the web asset.");
-      return;
+    if (assetCategory === "Add-ons") {
+      if (!addonPhoto) {
+        setAssetFormError("Please upload a Preview Photo for the Add-on.");
+        return;
+      }
+    } else {
+      if (!assetPhoto) {
+        setAssetFormError("Please upload a photo for the web asset.");
+        return;
+      }
     }
 
     setIsAssetSubmitting(true);
 
     try {
-      // 1. Upload to Firebase Storage
-      const storagePath = `website_assets/${Date.now()}_${assetPhoto.name}`;
-      const imageRef = ref(storage, storagePath);
-      
-      const uploadSnapshot = await uploadBytes(imageRef, assetPhoto);
-      const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+      if (assetCategory === "Add-ons") {
+        let photoUrl = "";
+        let videoUrl = "";
 
-      // 2. Add document to Firestore 'site_images' collection (historical backup if needed)
-      const siteImagesPath = "site_images";
-      try {
-        await addDoc(collection(db, siteImagesPath), {
-          url: downloadUrl,
-          category: assetCategory,
-          productId: selectedAssetId,
-          createdAt: serverTimestamp()
+        if (addonPhoto) {
+          const photoPath = `addon_assets/${Date.now()}_${addonPhoto.name}`;
+          const photoRef = ref(storage, photoPath);
+          const uploadSnap = await uploadBytes(photoRef, addonPhoto);
+          photoUrl = await getDownloadURL(uploadSnap.ref);
+        }
+
+        if (addonVideo) {
+          const videoPath = `addon_assets/${Date.now()}_${addonVideo.name}`;
+          const videoRef = ref(storage, videoPath);
+          const uploadSnap = await uploadBytes(videoRef, addonVideo);
+          videoUrl = await getDownloadURL(uploadSnap.ref);
+        }
+
+        const docRef = doc(db, "addon_media", selectedAssetId);
+        await setDoc(docRef, {
+          addonId: selectedAssetId,
+          addonName: selectedAssetId,
+          photoUrl: photoUrl || "",
+          videoUrl: videoUrl || "",
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        setAssetUploadSuccess(true);
+        setAddonPhoto(null);
+        setAddonPhotoPreview(null);
+        setAddonVideo(null);
+        setAddonVideoPreview(null);
+        if (addonPhotoInputRef.current) addonPhotoInputRef.current.value = "";
+        if (addonVideoInputRef.current) addonVideoInputRef.current.value = "";
+      } else {
+        // 1. Upload to Firebase Storage
+        const storagePath = `website_assets/${Date.now()}_${assetPhoto.name}`;
+        const imageRef = ref(storage, storagePath);
+        
+        const uploadSnapshot = await uploadBytes(imageRef, assetPhoto!);
+        const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+
+        // 2. Add document to Firestore 'site_images' collection (historical backup if needed)
+        const siteImagesPath = "site_images";
+        try {
+          await addDoc(collection(db, siteImagesPath), {
+            url: downloadUrl,
+            category: assetCategory,
+            productId: selectedAssetId,
+            createdAt: serverTimestamp()
+          });
+        } catch (firestoreError) {
+          console.warn("Soft warning: site_images backup failed:", firestoreError);
+        }
+
+        // 3. Directly tie the image to the specific product in 'gear_catalog'!
+        await setDoc(doc(db, "gear_catalog", selectedAssetId), {
+          gearId: selectedAssetId,
+          gearName: getProductNameById(selectedAssetId),
+          mediaUrl: downloadUrl,
+          mediaType: "image",
+          storagePath,
+          updatedAt: serverTimestamp()
         });
-      } catch (firestoreError) {
-        console.warn("Soft warning: site_images backup failed:", firestoreError);
-      }
 
-      // 3. Directly tie the image to the specific product in 'gear_catalog'!
-      await setDoc(doc(db, "gear_catalog", selectedAssetId), {
-        gearId: selectedAssetId,
-        gearName: getProductNameById(selectedAssetId),
-        mediaUrl: downloadUrl,
-        mediaType: "image",
-        storagePath,
-        updatedAt: serverTimestamp()
-      });
-
-      setAssetUploadSuccess(true);
-      setAssetPhoto(null);
-      setAssetPhotoPreview(null);
-      if (assetFileInputRef.current) {
-        assetFileInputRef.current.value = "";
+        setAssetUploadSuccess(true);
+        setAssetPhoto(null);
+        setAssetPhotoPreview(null);
+        if (assetFileInputRef.current) {
+          assetFileInputRef.current.value = "";
+        }
       }
     } catch (err: any) {
       console.error("Asset upload failure:", err);
-      setAssetFormError(err.message || "Failed to register new asset image. Try again.");
+      setAssetFormError(err.message || "Failed to register new asset. Try again.");
     } finally {
       setIsAssetSubmitting(false);
     }
@@ -955,6 +1008,7 @@ export function AdminDashboard() {
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Name</th>
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Contact Number</th>
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Email</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Location / Delivery</th>
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap max-w-[180px]">Assets</th>
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Add-ons</th>
                     <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Start date</th>
@@ -969,7 +1023,7 @@ export function AdminDashboard() {
                 <tbody className="divide-y divide-white/5">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={14} className="text-center py-20 text-xs font-mono text-white/30">
+                      <td colSpan={15} className="text-center py-20 text-xs font-mono text-white/30">
                         No customer orders stored in the orders collection.
                       </td>
                     </tr>
@@ -995,6 +1049,36 @@ export function AdminDashboard() {
                         {/* Email */}
                         <td className="px-4 py-4 text-[11px] font-mono text-white/50 truncate max-w-[120px] whitespace-nowrap" title={order["Email id"]}>
                           {order["Email id"] || "N/A"}
+                        </td>
+                        {/* Location / Delivery */}
+                        <td className="px-4 py-4 text-xs whitespace-nowrap">
+                          {(() => {
+                            const rawLoc = order.location || order.locationLink || order.address;
+                            if (!rawLoc) return <span className="text-white/30 italic font-mono text-[10px]">N/A</span>;
+                            
+                            // Check if Google Maps link or dynamic link
+                            const isUrl = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(rawLoc.trim()) || 
+                                          rawLoc.trim().includes("maps.google") || 
+                                          rawLoc.trim().includes("maps.app.goo.gl");
+                            if (isUrl) {
+                              const fullUrl = rawLoc.trim().startsWith("http") ? rawLoc.trim() : `https://${rawLoc.trim()}`;
+                              return (
+                                <a
+                                  href={fullUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-afterhours-cyan hover:text-white hover:underline font-bold transition-all text-[11px] uppercase tracking-wider"
+                                >
+                                  📍 View Map ➔
+                                </a>
+                              );
+                            }
+                            return (
+                              <span className="text-white/70 max-w-[150px] truncate block text-[11px]" title={rawLoc}>
+                                {rawLoc}
+                              </span>
+                            );
+                          })()}
                         </td>
                         {/* Assets */}
                         <td className="px-4 py-4 text-[11px] text-white/70 max-w-[200px] leading-relaxed whitespace-pre-wrap">
@@ -1358,11 +1442,12 @@ export function AdminDashboard() {
                   </label>
                   <select
                     value={assetCategory}
-                    onChange={(e) => setAssetCategory(e.target.value as "Combos" | "Individual Gears")}
+                    onChange={(e) => setAssetCategory(e.target.value as "Combos" | "Individual Gears" | "Add-ons")}
                     className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-afterhours-cyan transition-all cursor-pointer font-bold uppercase tracking-wider"
                   >
                     <option value="Combos" className="bg-afterhours-charcoal text-white">Combos</option>
                     <option value="Individual Gears" className="bg-afterhours-charcoal text-white">Individual Gears</option>
+                    <option value="Add-ons" className="bg-afterhours-charcoal text-white">Add-ons</option>
                   </select>
                 </div>
 
@@ -1375,13 +1460,14 @@ export function AdminDashboard() {
                     onChange={(e) => setSelectedAssetId(e.target.value)}
                     className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-afterhours-cyan transition-all cursor-pointer font-bold uppercase tracking-wider"
                   >
-                    {assetCategory === "Combos" ? (
+                    {assetCategory === "Combos" && (
                       <>
                         <option value="combo-theatre" className="bg-afterhours-charcoal text-white">Gaming Theatre</option>
                         <option value="combo-party" className="bg-afterhours-charcoal text-white">Full Party Setup</option>
                         <option value="combo-racing" className="bg-afterhours-charcoal text-white">PS5 Mega Racing Combo</option>
                       </>
-                    ) : (
+                    )}
+                    {assetCategory === "Individual Gears" && (
                       <>
                         <option value="hw-ps5" className="bg-afterhours-charcoal text-white">Play Station 5 ( PS5 console)</option>
                         <option value="hw-speaker" className="bg-afterhours-charcoal text-white">JBL Party Speaker</option>
@@ -1390,58 +1476,181 @@ export function AdminDashboard() {
                         <option value="hw-wheel" className="bg-afterhours-charcoal text-white">Logitech G29 Racing Wheel</option>
                       </>
                     )}
+                    {assetCategory === "Add-ons" && (
+                      <>
+                        <option value="Extra Controller" className="bg-afterhours-charcoal text-white">Extra Controller</option>
+                        <option value="Meta Shots Bat" className="bg-afterhours-charcoal text-white">Meta Shots Bat</option>
+                        <option value="Premium Games" className="bg-afterhours-charcoal text-white">Premium Games</option>
+                        <option value="Projector Screen" className="bg-afterhours-charcoal text-white">Projector Screen</option>
+                        <option value="Heavy Duty Tripod" className="bg-afterhours-charcoal text-white">Heavy Duty Tripod</option>
+                        <option value="Wireless Mic" className="bg-afterhours-charcoal text-white">Wireless Mic</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
 
-              {/* Drag & Drop Upload Block */}
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
-                  Upload Asset Photo <span className="text-afterhours-cyan">*</span>
-                </label>
-                
-                <div
-                  onDragOver={handleAssetDragOver}
-                  onDragLeave={handleAssetDragLeave}
-                  onDrop={handleAssetDrop}
-                  onClick={() => assetFileInputRef.current?.click()}
-                  className={`relative border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                    assetDragActive 
-                      ? "border-afterhours-cyan bg-afterhours-cyan/5 scale-[1.01]" 
-                      : "border-white/10 bg-black/30 hover:bg-black/50 hover:border-white/20"
-                  }`}
-                >
-                  <input
-                    ref={assetFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAssetFileChange}
-                    className="hidden"
-                  />
-
-                  {assetPhotoPreview ? (
-                    <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
-                      <img
-                        src={assetPhotoPreview}
-                        alt="Asset Preview"
-                        className="max-h-60 w-full object-contain rounded-2xl border border-white/10 my-2"
+              {/* Drag & Drop Upload Block or Addons Inputs */}
+              {assetCategory === "Add-ons" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Photo Zone */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
+                      Preview Photo <span className="text-afterhours-cyan">*</span>
+                    </label>
+                    <div
+                      onClick={() => addonPhotoInputRef.current?.click()}
+                      className="border border-dashed border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-black/30 hover:bg-black/50 hover:border-white/20 transition-all min-h-[160px]"
+                    >
+                      <input
+                        ref={addonPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            setAddonPhoto(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setAddonPhotoPreview(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="hidden"
                       />
-                      <div className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white hover:text-afterhours-pink p-2 rounded-full border border-white/10 transition-colors shadow-lg">
-                        <button type="button" onClick={removeAssetPhoto}>
-                          <X size={16} />
-                        </button>
-                      </div>
+                      {addonPhotoPreview ? (
+                        <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
+                          <img
+                            src={addonPhotoPreview}
+                            alt="Addon Photo Preview"
+                            className="max-h-32 object-contain rounded-xl mx-auto"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddonPhoto(null);
+                              setAddonPhotoPreview(null);
+                              if (addonPhotoInputRef.current) addonPhotoInputRef.current.value = "";
+                            }}
+                            className="absolute top-1 right-1 bg-black/80 hover:bg-black text-rose-400 p-1.5 rounded-full border border-white/10 transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-white/50 font-mono text-xs">
+                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mx-auto text-white/40">
+                            <ImageIcon size={16} />
+                          </div>
+                          <span>Upload Photo</span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-3 py-3 pointer-events-none">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto text-white/40">
-                        <ImageIcon size={20} />
-                      </div>
-                      <p className="text-xs text-white/85 font-mono">Drag asset photo here or <span className="text-afterhours-cyan font-bold">browse</span></p>
+                  </div>
+
+                  {/* Video Zone */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
+                      Preview Video (mp4 only)
+                    </label>
+                    <div
+                      onClick={() => addonVideoInputRef.current?.click()}
+                      className="border border-dashed border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer bg-black/30 hover:bg-black/50 hover:border-white/20 transition-all min-h-[160px]"
+                    >
+                      <input
+                        ref={addonVideoInputRef}
+                        type="file"
+                        accept="video/mp4"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            setAddonVideo(file);
+                            setAddonVideoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      {addonVideoPreview ? (
+                        <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
+                          <video
+                            src={addonVideoPreview}
+                            className="max-h-32 object-contain rounded-xl mx-auto"
+                            controls
+                            muted
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddonVideo(null);
+                              setAddonVideoPreview(null);
+                              if (addonVideoInputRef.current) addonVideoInputRef.current.value = "";
+                            }}
+                            className="absolute top-1 right-1 bg-black/80 hover:bg-black text-rose-400 p-1.5 rounded-full border border-white/10 transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 text-white/50 font-mono text-xs">
+                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mx-auto text-white/40">
+                            <Play size={16} />
+                          </div>
+                          <span>Upload Video (.mp4)</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
+                    Upload Asset Photo <span className="text-afterhours-cyan">*</span>
+                  </label>
+                  
+                  <div
+                    onDragOver={handleAssetDragOver}
+                    onDragLeave={handleAssetDragLeave}
+                    onDrop={handleAssetDrop}
+                    onClick={() => assetFileInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                      assetDragActive 
+                        ? "border-afterhours-cyan bg-afterhours-cyan/5 scale-[1.01]" 
+                        : "border-white/10 bg-black/30 hover:bg-black/50 hover:border-white/20"
+                    }`}
+                  >
+                    <input
+                      ref={assetFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAssetFileChange}
+                      className="hidden"
+                    />
+
+                    {assetPhotoPreview ? (
+                      <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
+                        <img
+                          src={assetPhotoPreview}
+                          alt="Asset Preview"
+                          className="max-h-60 w-full object-contain rounded-2xl border border-white/10 my-2"
+                        />
+                        <div className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white hover:text-afterhours-pink p-2 rounded-full border border-white/10 transition-colors shadow-lg">
+                          <button type="button" onClick={removeAssetPhoto}>
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 py-3 pointer-events-none">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto text-white/40">
+                          <ImageIcon size={20} />
+                        </div>
+                        <p className="text-xs text-white/85 font-mono">Drag asset photo here or <span className="text-afterhours-cyan font-bold">browse</span></p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
             </div>
 
