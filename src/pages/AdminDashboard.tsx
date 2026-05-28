@@ -39,9 +39,18 @@ export function AdminDashboard() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Form states - Website Asset Manager
-  const [assetCategory, setAssetCategory] = useState<"Combo" | "Asset">("Combo");
+  const [assetCategory, setAssetCategory] = useState<"Combos" | "Individual Gears">("Combos");
+  const [selectedAssetId, setSelectedAssetId] = useState<string>("combo-theatre");
   const [assetPhoto, setAssetPhoto] = useState<File | null>(null);
   const [assetPhotoPreview, setAssetPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (assetCategory === "Combos") {
+      setSelectedAssetId("combo-theatre");
+    } else {
+      setSelectedAssetId("hw-ps5");
+    }
+  }, [assetCategory]);
 
   // Submit flow states - Assets
   const [isAssetSubmitting, setIsAssetSubmitting] = useState(false);
@@ -390,6 +399,20 @@ export function AdminDashboard() {
     }
   };
 
+  const getProductNameById = (id: string) => {
+    const allProducts = [
+      { id: "combo-theatre", name: "Gaming Theatre" },
+      { id: "combo-party", name: "Full Party Setup" },
+      { id: "combo-racing", name: "PS5 Mega Racing Combo" },
+      { id: "hw-ps5", name: "Play Station 5 ( PS5 console)" },
+      { id: "hw-speaker", name: "JBL Party Speaker" },
+      { id: "hw-projector", name: "Full HD Projector" },
+      { id: "hw-vr2", name: "Sony PlayStation VR2" },
+      { id: "hw-wheel", name: "Logitech G29 Racing Wheel" }
+    ];
+    return allProducts.find(p => p.id === id)?.name || id;
+  };
+
   const handleAssetSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setAssetFormError("");
@@ -409,17 +432,28 @@ export function AdminDashboard() {
       const uploadSnapshot = await uploadBytes(imageRef, assetPhoto);
       const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
 
-      // 2. Add document to Firestore 'site_images' collection
+      // 2. Add document to Firestore 'site_images' collection (historical backup if needed)
       const siteImagesPath = "site_images";
       try {
         await addDoc(collection(db, siteImagesPath), {
           url: downloadUrl,
           category: assetCategory,
+          productId: selectedAssetId,
           createdAt: serverTimestamp()
         });
       } catch (firestoreError) {
-        handleFirestoreError(firestoreError, OperationType.CREATE, siteImagesPath);
+        console.warn("Soft warning: site_images backup failed:", firestoreError);
       }
+
+      // 3. Directly tie the image to the specific product in 'gear_catalog'!
+      await setDoc(doc(db, "gear_catalog", selectedAssetId), {
+        gearId: selectedAssetId,
+        gearName: getProductNameById(selectedAssetId),
+        mediaUrl: downloadUrl,
+        mediaType: "image",
+        storagePath,
+        updatedAt: serverTimestamp()
+      });
 
       setAssetUploadSuccess(true);
       setAssetPhoto(null);
@@ -1316,34 +1350,47 @@ export function AdminDashboard() {
           <form onSubmit={handleAssetSubmit} className="space-y-8 bg-afterhours-gray/25 border border-white/5 backdrop-blur-md p-8 md:p-10 rounded-3xl">
             <div className="space-y-6">
               
-              {/* Category selector */}
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
-                  Assign Category <span className="text-afterhours-cyan">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setAssetCategory("Combo")}
-                    className={`py-4 px-6 rounded-2xl border text-center transition-all cursor-pointer ${
-                      assetCategory === "Combo"
-                        ? "bg-afterhours-cyan/15 border-afterhours-cyan text-afterhours-cyan font-black text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-                        : "bg-white/[0.02] border-white/5 hover:border-white/15 text-white/40 text-xs uppercase font-bold tracking-widest"
-                    }`}
+              {/* Step 1 & Step 2 Selection Process */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
+                    Step 1: Select Category <span className="text-afterhours-cyan">*</span>
+                  </label>
+                  <select
+                    value={assetCategory}
+                    onChange={(e) => setAssetCategory(e.target.value as "Combos" | "Individual Gears")}
+                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-afterhours-cyan transition-all cursor-pointer font-bold uppercase tracking-wider"
                   >
-                    🚀 Combo Packet
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAssetCategory("Asset")}
-                    className={`py-4 px-6 rounded-2xl border text-center transition-all cursor-pointer ${
-                      assetCategory === "Asset"
-                        ? "bg-afterhours-cyan/15 border-afterhours-cyan text-afterhours-cyan font-black text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.15)]"
-                        : "bg-white/[0.02] border-white/5 hover:border-white/15 text-white/40 text-xs uppercase font-bold tracking-widest"
-                    }`}
+                    <option value="Combos" className="bg-afterhours-charcoal text-white">Combos</option>
+                    <option value="Individual Gears" className="bg-afterhours-charcoal text-white">Individual Gears</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-[0.25em] text-white/50 block">
+                    Step 2: Select Specific Product <span className="text-afterhours-cyan">*</span>
+                  </label>
+                  <select
+                    value={selectedAssetId}
+                    onChange={(e) => setSelectedAssetId(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-afterhours-cyan transition-all cursor-pointer font-bold uppercase tracking-wider"
                   >
-                    🎮 Gear / Asset
-                  </button>
+                    {assetCategory === "Combos" ? (
+                      <>
+                        <option value="combo-theatre" className="bg-afterhours-charcoal text-white">Gaming Theatre</option>
+                        <option value="combo-party" className="bg-afterhours-charcoal text-white">Full Party Setup</option>
+                        <option value="combo-racing" className="bg-afterhours-charcoal text-white">PS5 Mega Racing Combo</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="hw-ps5" className="bg-afterhours-charcoal text-white">Play Station 5 ( PS5 console)</option>
+                        <option value="hw-speaker" className="bg-afterhours-charcoal text-white">JBL Party Speaker</option>
+                        <option value="hw-projector" className="bg-afterhours-charcoal text-white">Full HD Projector</option>
+                        <option value="hw-vr2" className="bg-afterhours-charcoal text-white">Sony PlayStation VR2</option>
+                        <option value="hw-wheel" className="bg-afterhours-charcoal text-white">Logitech G29 Racing Wheel</option>
+                      </>
+                    )}
+                  </select>
                 </div>
               </div>
 

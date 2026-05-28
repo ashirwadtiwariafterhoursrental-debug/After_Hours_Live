@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { 
-  Package, ArrowRight, CheckCircle2, Monitor, Gamepad2, 
+  Package, ArrowRight, Monitor, Gamepad2, 
   Speaker, Zap, ShieldCheck, Truck, ShoppingCart, Calendar, 
   Tag, X, Plus, Minus, AlertTriangle, Loader2
 } from "lucide-react";
@@ -860,51 +860,6 @@ export function Rentals() {
                       onChange={e => setFormData({...formData, phone: e.target.value})}
                       className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-afterhours-cyan transition-all"
                     />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-4">Gear Selection Checklist</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {RENTAL_ITEMS.map(item => {
-                      const isWaitlistItem = item.id === "combo-racing" || item.id === "hw-vr2" || item.id === "hw-wheel";
-                      return (
-                        <label
-                          key={item.id}
-                          className={`px-6 py-4 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-between ${
-                            cart.find(i => i.id === item.id)
-                              ? 'bg-white/10 border-afterhours-cyan text-white'
-                              : isWaitlistItem
-                                ? 'bg-afterhours-pink/5 border-afterhours-pink/20 text-afterhours-pink hover:border-afterhours-pink/40'
-                                : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <input 
-                              type="checkbox" 
-                              className="hidden"
-                              checked={!!cart.find(i => i.id === item.id)}
-                              onChange={() => {
-                                if (isWaitlistItem) {
-                                  openWaitlistModal(item);
-                                  return;
-                                }
-                                if (cart.find(i => i.id === item.id)) {
-                                  setCart(prev => prev.filter(i => i.id !== item.id));
-                                } else {
-                                  openSmartCartModal(item);
-                                }
-                              }}
-                            />
-                            {item.name}
-                          </div>
-                          {cart.find(i => i.id === item.id) && <CheckCircle2 size={16} className="text-afterhours-cyan" />}
-                          {isWaitlistItem && !cart.find(i => i.id === item.id) && (
-                            <span className="text-[9px] font-black uppercase text-afterhours-pink px-2.5 py-0.5 rounded-full bg-afterhours-pink/10 border border-afterhours-pink/20">Waitlist</span>
-                          )}
-                        </label>
-                      );
-                    })}
                   </div>
                 </div>
 
