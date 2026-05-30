@@ -735,7 +735,8 @@ Here are my remaining details for delivery:
         "location": deliveryLocation,
         "locationLink": deliveryLocation,
         "address": deliveryLocation,
-        "assignedUnits": assigned
+        "assignedUnits": assigned,
+        "assignedUnit": assigned[0] || ""
       };
 
       await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);

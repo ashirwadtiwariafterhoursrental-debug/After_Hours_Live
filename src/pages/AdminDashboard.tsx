@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, FormEvent, DragEvent, ChangeEvent, useMemo
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, writeBatch, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, writeBatch, getDocs, where } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { auth, db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
@@ -120,6 +120,7 @@ export function AdminDashboard() {
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [selectedAssetUnit, setSelectedAssetUnit] = useState<string>("");
+  const [calendarOrders, setCalendarOrders] = useState<any[]>([]);
   const [calendarMode, setCalendarMode] = useState<"gears" | "addons">("gears");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -188,6 +189,74 @@ export function AdminDashboard() {
       setSelectedAssetUnit(allGearUnitsList[0].name);
     }
   }, [allGearUnitsList, selectedAssetUnit]);
+
+  // Synchronize calendar-specific orders in real-time, matching selectedAssetUnit via array-contains
+  useEffect(() => {
+    if (!selectedAssetUnit) {
+      setCalendarOrders([]);
+      return;
+    }
+
+    const ordersRef = collection(db, "orders");
+    const q = query(ordersRef, where("assignedUnits", "array-contains", selectedAssetUnit));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const oStatus = data["Order Status"] || data.Status || data.status || "";
+        
+        // Filter out cancelled or rejected orders
+        if (oStatus !== "Cancelled" && oStatus !== "Rejected") {
+          // Normalize dates to local midnight at browser timezone for maximum alignment
+          const startStr = data["Start date"] || data.startDate || "";
+          const endStr = data["End date"] || data.endDate || "";
+          
+          let normalizedStart = "";
+          let normalizedEnd = "";
+
+          const parseToLocalMidnightString = (dateStr: string): string => {
+            if (!dateStr) return "";
+            const trimmed = dateStr.trim();
+            const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (matchYMD) {
+              const d = new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
+              return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
+            }
+            const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (matchDMY) {
+              const d = new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
+              return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
+            }
+            const parsed = new Date(trimmed);
+            if (!isNaN(parsed.getTime())) {
+              const d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+              return d.toISOString().split('T')[0];
+            }
+            return "";
+          };
+
+          if (startStr) normalizedStart = parseToLocalMidnightString(startStr);
+          if (endStr) normalizedEnd = parseToLocalMidnightString(endStr);
+
+          list.push({
+            id: docSnap.id,
+            ...data,
+            // Align in both formats so any parser resolves at local midnight
+            "Start date": normalizedStart || startStr,
+            "End date": normalizedEnd || endStr,
+            startDate: normalizedStart || startStr,
+            endDate: normalizedEnd || endStr,
+          });
+        }
+      });
+      setCalendarOrders(list);
+    }, (err) => {
+      console.error("Error subscribing to calendar orders collection:", err);
+    });
+
+    return () => unsubscribe();
+  }, [selectedAssetUnit]);
 
   // Synchronize category first option for Addons mode dropdown selection
   useEffect(() => {
@@ -339,7 +408,10 @@ export function AdminDashboard() {
     const unitStats = addonUnits.map(unit => {
       const isUnitBooked = activeOrders.some(order => {
         const assigned = order.assignedUnits || [];
-        return Array.isArray(assigned) ? assigned.includes(unit.name) : assigned === unit.name;
+        const assignedUnit = order.assignedUnit || "";
+        return (assignedUnit === unit.name) || (
+          Array.isArray(assigned) ? assigned.includes(unit.name) : assigned === unit.name
+        );
       });
       if (isUnitBooked) {
         bookedCount++;
@@ -636,7 +708,10 @@ export function AdminDashboard() {
         updates.locationLink = value;
         updates.address = value;
       }
-      await updateDoc(orderRef, updates);
+      if (field === "assignedUnit") {
+        updates.assignedUnits = value ? [value] : [];
+      }
+      await setDoc(orderRef, updates, { merge: true });
     } catch (err: any) {
       console.error("Failed to inline save order:", err);
       alert("Error saving: " + err.message);
@@ -684,7 +759,8 @@ export function AdminDashboard() {
         "Pay Status": "Pending",
         "Status": "Pending",
         "Managed By": "Admin",
-        "assignedUnits": []
+        "assignedUnits": [],
+        "assignedUnit": ""
       };
       await addDoc(collection(db, "orders"), payload);
     } catch (err: any) {
@@ -784,7 +860,8 @@ export function AdminDashboard() {
             "Pay Status": row["Pay Status"] || "Paid",
             "Status": row["Order Status"] || "Completed",
             "Managed By": row["Managed By"] || "System",
-            "assignedUnits": isAssignedArr
+            "assignedUnits": isAssignedArr,
+            "assignedUnit": isAssignedArr[0] || ""
           };
 
           const docRef = doc(db, "orders", orderId);
@@ -850,25 +927,51 @@ export function AdminDashboard() {
 
   const getOrdersForDayAndUnit = (day: Date, unit: string) => {
     if (!day) return [];
-    const targetTime = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+    const targetTime = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
 
-    return orders.filter(order => {
+    const parseLocalDate = (dateStr: string): Date => {
+      if (!dateStr) return new Date(NaN);
+      const trimmed = dateStr.trim();
+      const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (matchYMD) {
+        return new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
+      }
+      const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+      if (matchDMY) {
+        return new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
+      }
+      const d = new Date(trimmed);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    };
+
+    // Use query-based calendarOrders for gears visual calendar, fallback to list logic
+    const sourceOrders = (calendarMode === "gears" && selectedAssetUnit) ? calendarOrders : orders;
+
+    return sourceOrders.filter(order => {
+      const oStatus = order["Order Status"] || order.Status || order.status || "";
+      if (oStatus === "Cancelled" || oStatus === "Rejected") return false;
+
       const startStr = order["Start date"] || order.startDate;
       const endStr = order["End date"] || order.endDate;
       if (!startStr || !endStr) return false;
       
-      const orderStart = new Date(startStr);
-      const startOnly = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate()).getTime();
+      const orderStart = parseLocalDate(startStr);
+      if (isNaN(orderStart.getTime())) return false;
+      const startOnly = orderStart.getTime();
       
-      const orderEnd = new Date(endStr);
-      const endOnly = new Date(orderEnd.getFullYear(), orderEnd.getMonth(), orderEnd.getDate()).getTime();
+      const orderEnd = parseLocalDate(endStr);
+      if (isNaN(orderEnd.getTime())) return false;
+      const endOnly = orderEnd.getTime();
 
       const isDateMatched = targetTime >= startOnly && targetTime <= endOnly;
 
       const assigned = order.assignedUnits || [];
-      const hasUnit = Array.isArray(assigned)
-        ? assigned.includes(unit)
-        : assigned === unit;
+      const assignedUnit = order.assignedUnit || "";
+      const hasUnit = (assignedUnit === unit) || (
+        Array.isArray(assigned)
+          ? assigned.includes(unit)
+          : assigned === unit
+      );
 
       return isDateMatched && hasUnit;
     });
@@ -1558,7 +1661,16 @@ export function AdminDashboard() {
           const isEditing = (field: string, orderId: string) => editingCell?.orderId === orderId && editingCell?.field === field;
 
           const renderEditableTextCell = (field: string, defaultValue: string, order: any, displayValue?: any) => {
-            const currentVal = order[field] !== undefined ? order[field] : defaultValue;
+            const getFieldVal = () => {
+              if (field === "assignedUnit") {
+                if (order.assignedUnit) return order.assignedUnit;
+                if (Array.isArray(order.assignedUnits) && order.assignedUnits.length > 0) return order.assignedUnits[0];
+                if (typeof order.assignedUnits === 'string' && order.assignedUnits) return order.assignedUnits;
+                return defaultValue;
+              }
+              return order[field] !== undefined ? order[field] : defaultValue;
+            };
+            const currentVal = getFieldVal();
             if (isEditing(field, order.id)) {
               if (field === "Start date" || field === "End date") {
                 let dateValue = tempValue;
@@ -1601,6 +1713,42 @@ export function AdminDashboard() {
                         }}
                         className="p-1 px-1.5 bg-afterhours-green/25 hover:bg-afterhours-green text-afterhours-green hover:text-black rounded text-[10px] uppercase font-bold tracking-wide transition-all cursor-pointer flex items-center justify-center"
                         title="Save Date"
+                      >
+                        ✔
+                      </button>
+                    </div>
+                  </td>
+                );
+              }
+
+              if (field === "assignedUnit") {
+                const selectedVal = tempValue || currentVal || "";
+                return (
+                  <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[200px]">
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={selectedVal === "None" ? "" : selectedVal}
+                        onChange={(e) => setTempValue(e.target.value)}
+                        onBlur={() => {
+                          handleInlineSave(order.id, field, tempValue || selectedVal);
+                        }}
+                        className="bg-black text-[11px] font-mono text-white border border-afterhours-cyan/60 rounded px-2 py-1 focus:outline-none cursor-pointer"
+                        autoFocus
+                      >
+                        <option value="">None</option>
+                        {allGearUnitsList.map((unit) => (
+                          <option key={unit.id} value={unit.name}>
+                            {unit.name} ({unit.categoryName})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleInlineSave(order.id, field, tempValue || selectedVal);
+                        }}
+                        className="p-1 px-1.5 bg-afterhours-green/25 hover:bg-afterhours-green text-afterhours-green hover:text-black rounded text-[10px] uppercase font-bold tracking-wide transition-all cursor-pointer flex items-center justify-center"
+                        title="Save Unit"
                       >
                         ✔
                       </button>
@@ -1763,6 +1911,7 @@ export function AdminDashboard() {
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Type</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Item Rented</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Add-Ons</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Assigned Unit</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Location Link</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 text-center whitespace-nowrap">KYC Doc</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Rent Amount</th>
@@ -1781,7 +1930,7 @@ export function AdminDashboard() {
                   <tbody className="divide-y divide-white/5">
                     {orders.length === 0 ? (
                       <tr>
-                        <td colSpan={22} className="text-center py-20 text-xs font-mono text-white/30">
+                        <td colSpan={23} className="text-center py-20 text-xs font-mono text-white/30">
                           No customer orders stored in the orders collection.
                         </td>
                       </tr>
@@ -1819,6 +1968,9 @@ export function AdminDashboard() {
 
                           {/* 9. Add-Ons */}
                           {renderEditableTextCell("Addon", "N/A", order)}
+
+                          {/* 9b. Assigned Unit */}
+                          {renderEditableTextCell("assignedUnit", "None", order)}
 
                           {/* 10. Location Link */}
                           {(() => {
