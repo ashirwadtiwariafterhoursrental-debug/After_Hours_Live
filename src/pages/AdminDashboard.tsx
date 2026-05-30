@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, writeBatch, getDocs } from "firebase/firestore";
+import * as XLSX from "xlsx";
 import { auth, db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
 import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play, Calendar, Monitor, Maximize, Mic, Zap } from "lucide-react";
@@ -615,93 +616,140 @@ export function AdminDashboard() {
     setEditingCell(null);
     try {
       const orderRef = doc(db, "orders", orderId);
-      await updateDoc(orderRef, {
-        [field]: value
-      });
-    } catch (err) {
-      console.error("Failed to inline save order:", err);
-    }
-  };
-
-  const parseCSV = (text: string) => {
-    const lines = text.split(/\r?\n/);
-    if (lines.length < 2) return [];
-
-    const result: any[] = [];
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const values = [];
-      let insideQuote = false;
-      let currentVal = "";
-
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"') {
-          insideQuote = !insideQuote;
-        } else if (char === ',' && !insideQuote) {
-          values.push(currentVal.trim().replace(/^"|"$/g, ''));
-          currentVal = "";
-        } else {
-          currentVal += char;
-        }
+      const updates: any = { [field]: value };
+      if (field === "location") {
+        updates.locationLink = value;
+        updates.address = value;
       }
-      values.push(currentVal.trim().replace(/^"|"$/g, ''));
-
-      const obj: Record<string, string> = {};
-      headers.forEach((h, index) => {
-        obj[h] = values[index] !== undefined ? values[index] : "";
-      });
-      result.push(obj);
+      await updateDoc(orderRef, updates);
+    } catch (err: any) {
+      console.error("Failed to inline save order:", err);
+      alert("Error saving: " + err.message);
     }
-    return result;
   };
 
-  const handleImportCSV = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleCreateManualOrder = async () => {
+    try {
+      const manualId = `MH-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+      const payload = {
+        "Order ID": manualId,
+        "Order Date": new Date().toISOString(),
+        "Name": "New Manual Client",
+        "Contact number": "",
+        "Start date": new Date().toISOString().split('T')[0],
+        "End date": new Date().toISOString().split('T')[0],
+        "Order Type": "Manual",
+        "Assets": "Draft Asset",
+        "Addon": "",
+        "location": "",
+        "locationLink": "",
+        "KYC Document URL": "",
+        "Rent Amount": "₹0",
+        "Extra Charges": "₹0",
+        "Additional Dis": "₹0",
+        "Total Revenue": "₹0",
+        "Security Dep.": "₹2000",
+        "Paid amt": "₹0",
+        "Remaining amt": "₹0",
+        "Pay Status": "Pending",
+        "Status": "Pending",
+        "Managed By": "Admin",
+        "assignedUnits": []
+      };
+      await addDoc(collection(db, "orders"), payload);
+    } catch (err: any) {
+      console.error("Failed to create manual order:", err);
+      alert("Error creating manual order: " + err.message);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (window.confirm("Are you sure you want to delete this order? This action is irreversible.")) {
+      try {
+        await deleteDoc(doc(db, "orders", orderId));
+      } catch (err: any) {
+        console.error("Failed to delete order:", err);
+        alert("Failed to delete order: " + err.message);
+      }
+    }
+  };
+
+  const handleImportExcel = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
-      const text = evt.target?.result as string;
-      if (!text) return;
-
       try {
-        const parsedRows = parseCSV(text);
-        if (parsedRows.length === 0) {
-          alert("No valid rows found in CSV.");
+        const data = evt.target?.result as ArrayBuffer;
+        if (!data) return;
+
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonRows.length === 0) {
+          alert("No rows found in Excel sheet.");
           return;
         }
 
         const batch = writeBatch(db);
 
-        parsedRows.forEach((row) => {
-          const orderId = row["Order Id"] || row["Order ID"] || `Import-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-          const isAssignedArr = row["assignedUnits"] ? row["assignedUnits"].split(";") : [];
-          
+        jsonRows.forEach((row: any) => {
+          const rawId = row["Order Id"] || row["Order ID"];
+          const orderId = rawId !== undefined ? String(rawId).trim() : `Import-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+          const isAssignedArr = row["assignedUnits"] ? String(row["assignedUnits"]).split(";") : [];
+
+          let orderDate = "";
+          if (row["Date"] !== undefined) {
+            if (row["Date"] instanceof Date) {
+              orderDate = row["Date"].toISOString();
+            } else {
+              orderDate = String(row["Date"]).trim();
+            }
+          } else {
+            orderDate = new Date().toISOString();
+          }
+
+          let startDate = "";
+          if (row["Start Date"] !== undefined) {
+            if (row["Start Date"] instanceof Date) {
+              startDate = row["Start Date"].toISOString().split('T')[0];
+            } else {
+              startDate = String(row["Start Date"]).trim();
+            }
+          }
+
+          let endDate = "";
+          if (row["End Date"] !== undefined) {
+            if (row["End Date"] instanceof Date) {
+              endDate = row["End Date"].toISOString().split('T')[0];
+            } else {
+              endDate = String(row["End Date"]).trim();
+            }
+          }
+
           const payload = {
             "Order ID": orderId,
-            "Order Date": row["Date"] || new Date().toISOString(),
+            "Order Date": orderDate,
             "Name": row["Client Name"] || "Imported Legacy Client",
-            "Contact number": row["Phone Num"] || "N/A",
-            "Start date": row["Start Date"] || "",
-            "End date": row["End Date"] || "",
+            "Contact number": row["Phone Num"] !== undefined ? String(row["Phone Num"]) : "",
+            "Start date": startDate,
+            "End date": endDate,
             "Order Type": row["Order Type"] || "Legacy Import",
             "Assets": row["Item Rented"] || "N/A",
-            "Addon": row["Add-Ons"] || "none",
-            "locationLink": row["Location Link"] || "",
+            "Addon": row["Add-Ons"] || "",
             "location": row["Location Link"] || "",
+            "locationLink": row["Location Link"] || "",
             "KYC Document URL": row["KYC Doc"] || "",
-            "Rent Amount": row["Rent Amount"] || "",
-            "Extra Charges": row["Extra Charges"] || "",
-            "Additional Dis": row["Additional Dis"] || "",
-            "Total Revenue": row["Total Revenue"] || "",
-            "Security Dep.": row["Security Dep."] || "",
-            "Paid amt": row["Token Paid"] || "₹0",
-            "Remaining amt": row["To Collect"] || "₹0",
+            "Rent Amount": row["Rent Amount"] !== undefined ? String(row["Rent Amount"]) : "",
+            "Extra Charges": row["Extra Charges"] !== undefined ? String(row["Extra Charges"]) : "",
+            "Additional Dis": row["Additional Dis"] !== undefined ? String(row["Additional Dis"]) : "",
+            "Total Revenue": row["Total Revenue"] !== undefined ? String(row["Total Revenue"]) : "",
+            "Security Dep.": row["Security Dep."] !== undefined ? String(row["Security Dep."]) : "",
+            "Paid amt": row["Token Paid"] !== undefined ? String(row["Token Paid"]) : "₹0",
+            "Remaining amt": row["To Collect"] !== undefined ? String(row["To Collect"]) : "₹0",
             "Pay Status": row["Pay Status"] || "Paid",
             "Status": row["Order Status"] || "Completed",
             "Managed By": row["Managed By"] || "System",
@@ -713,68 +761,45 @@ export function AdminDashboard() {
         });
 
         await batch.commit();
-        alert(`Successfully imported ${parsedRows.length} legacy orders!`);
+        alert(`Successfully imported ${jsonRows.length} legacy orders!`);
       } catch (err: any) {
-        console.error("CSV Import failed:", err);
-        alert("Failed to parsing and importing CSV: " + err.message);
+        console.error("Excel Import failed:", err);
+        alert("Failed parsing and importing Excel: " + err.message);
       }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      "Order Id", "Date", "Client Name", "Phone Num", "Start Date", "End Date", 
-      "Order Type", "Item Rented", "Add-Ons", "Location Link", "KYC Doc", 
-      "Rent Amount", "Extra Charges", "Additional Dis", "Total Revenue", 
-      "Security Dep.", "Token Paid", "To Collect", "Pay Status", "Order Status", "Managed By", "assignedUnits"
-    ];
+  const handleExportExcel = () => {
+    const formattedOrders = orders.map(order => ({
+      "Order Id": order["Order ID"] || order.id || "",
+      "Date": order["Order Date"] ? new Date(order["Order Date"]).toLocaleDateString() : "",
+      "Client Name": order["Name"] || "",
+      "Phone Num": order["Contact number"] || "",
+      "Start Date": order["Start date"] || "",
+      "End Date": order["End date"] || "",
+      "Order Type": order["Order Type"] || "Online",
+      "Item Rented": order["Assets"] || "",
+      "Add-Ons": order["Addon"] || "",
+      "Location Link": order.location || order.locationLink || order.address || "",
+      "KYC Doc": order["KYC Document URL"] || "",
+      "Rent Amount": order["Rent Amount"] || "",
+      "Extra Charges": order["Extra Charges"] || "",
+      "Additional Dis": order["Additional Dis"] || "",
+      "Total Revenue": order["Total Revenue"] || "",
+      "Security Dep.": order["Security Dep."] || "",
+      "Token Paid": order["Paid amt"] || "",
+      "To Collect": order["Remaining amt"] || "",
+      "Pay Status": order["Pay Status"] || "Pending",
+      "Order Status": order.Status || order.status || "Pending",
+      "Managed By": order["Managed By"] || "",
+      "assignedUnits": Array.isArray(order.assignedUnits) ? order.assignedUnits.join(";") : order.assignedUnits || ""
+    }));
 
-    const rows = orders.map(order => [
-      order["Order ID"] || order.id || "",
-      order["Order Date"] || "",
-      order["Name"] || "",
-      order["Contact number"] || "",
-      order["Start date"] || "",
-      order["End date"] || "",
-      order["Order Type"] || "Online",
-      order["Assets"] || "",
-      order["Addon"] || "",
-      order["locationLink"] || order["location"] || "",
-      order["KYC Document URL"] || "",
-      order["Rent Amount"] || "",
-      order["Extra Charges"] || "",
-      order["Additional Dis"] || "",
-      order["Total Revenue"] || "",
-      order["Security Dep."] || "",
-      order["Paid amt"] || "",
-      order["Remaining amt"] || "",
-      order["Pay Status"] || "Pending",
-      order.Status || order.status || "Pending",
-      order["Managed By"] || "",
-      Array.isArray(order.assignedUnits) ? order.assignedUnits.join(";") : order.assignedUnits || ""
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => 
-        row.map(val => {
-          const stringVal = String(val).replace(/"/g, '""');
-          return stringVal.includes(",") || stringVal.includes("\n") || stringVal.includes('"') 
-            ? `"${stringVal}"` 
-            : stringVal;
-        }).join(",")
-      )
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheet = XLSX.utils.json_to_sheet(formattedOrders);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+    XLSX.writeFile(workbook, "AfterHours_Orders.xlsx");
   };
 
   const daysInMonth = useMemo(() => {
@@ -1501,7 +1526,8 @@ export function AdminDashboard() {
         {activeTab === "orders" && (() => {
           const isEditing = (field: string, orderId: string) => editingCell?.orderId === orderId && editingCell?.field === field;
 
-          const renderEditableTextCell = (field: string, defaultValue: string, order: any) => {
+          const renderEditableTextCell = (field: string, defaultValue: string, order: any, displayValue?: any) => {
+            const currentVal = order[field] !== undefined ? order[field] : defaultValue;
             if (isEditing(field, order.id)) {
               return (
                 <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[120px]">
@@ -1527,13 +1553,15 @@ export function AdminDashboard() {
               <td
                 onClick={() => {
                   setEditingCell({ orderId: order.id, field });
-                  setTempValue(order[field] || defaultValue);
+                  setTempValue(currentVal);
                 }}
                 className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-all font-mono text-xs text-white/70 whitespace-nowrap min-w-[120px]"
                 title="Click to edit value"
               >
-                {order[field] !== undefined && order[field] !== "" ? (
-                  <span className="hover:text-afterhours-cyan transition-colors">{order[field]}</span>
+                {displayValue !== undefined ? (
+                  <span className="hover:text-afterhours-cyan transition-colors">{displayValue}</span>
+                ) : currentVal !== undefined && currentVal !== "" ? (
+                  <span className="hover:text-afterhours-cyan transition-colors">{currentVal}</span>
                 ) : (
                   <span className="text-white/20 italic tracking-wide group-hover:text-white/40">Click to edit</span>
                 )}
@@ -1558,31 +1586,45 @@ export function AdminDashboard() {
                 </div>
               </div>
 
-              {/* CSV Import/Export tools panel */}
+              {/* Excel Import/Export and Manual Create tools panel */}
               <div className="flex flex-wrap items-center gap-3 bg-[#121215]/50 border border-white/5 p-3 rounded-2xl">
                 <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 font-mono ml-1">Tools Panel:</span>
+                
+                {/* Create Manual Order */}
                 <button
-                  onClick={() => document.getElementById("csv-import-input")?.click()}
-                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-cyan/10 text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black border border-afterhours-cyan/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                  title="Upload legacy orders CSV file"
+                  onClick={handleCreateManualOrder}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-green/10 text-afterhours-green hover:bg-afterhours-green hover:text-black border border-afterhours-green/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-sans font-sans"
+                  title="Create a new blank manual order"
                 >
                   <Plus size={12} />
-                  Import Legacy CSV
+                  + Create Manual Order
+                </button>
+
+                {/* Import Excel */}
+                <button
+                  onClick={() => document.getElementById("excel-import-input")?.click()}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-cyan/10 text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black border border-afterhours-cyan/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-sans"
+                  title="Upload legacy orders Excel file"
+                >
+                  <UploadCloud size={12} />
+                  Import Legacy Excel
                 </button>
                 <input
                   type="file"
-                  id="csv-import-input"
-                  accept=".csv"
+                  id="excel-import-input"
+                  accept=".xlsx, .xls"
                   className="hidden"
-                  onChange={handleImportCSV}
+                  onChange={handleImportExcel}
                 />
+
+                {/* Export Excel */}
                 <button
-                  onClick={handleExportCSV}
-                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                  title="Download all orders in clean CSV"
+                  onClick={handleExportExcel}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 font-sans"
+                  title="Download all orders as Excel"
                 >
                   <FileText size={12} />
-                  Download CSV
+                  Download Excel
                 </button>
               </div>
 
@@ -1611,12 +1653,13 @@ export function AdminDashboard() {
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Pay Status</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Status</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Managed By</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 text-center whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {orders.length === 0 ? (
                       <tr>
-                        <td colSpan={21} className="text-center py-20 text-xs font-mono text-white/30">
+                        <td colSpan={22} className="text-center py-20 text-xs font-mono text-white/30">
                           No customer orders stored in the orders collection.
                         </td>
                       </tr>
@@ -1624,54 +1667,42 @@ export function AdminDashboard() {
                       orders.map((order) => (
                         <tr key={order.id} className="hover:bg-white/[0.02] transition-all border-b border-white/5">
                           {/* 1. Order Id */}
-                          <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-cyan whitespace-nowrap">
-                            {order["Order ID"] || order.id}
-                          </td>
+                          {renderEditableTextCell("Order ID", order.id || "", order, order["Order ID"] || order.id)}
 
                           {/* 2. Date */}
-                          <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap">
-                            {order["Order Date"] ? new Date(order["Order Date"]).toLocaleDateString() : "N/A"}
-                          </td>
+                          {renderEditableTextCell(
+                            "Order Date", 
+                            new Date().toISOString(), 
+                            order, 
+                            order["Order Date"] ? new Date(order["Order Date"]).toLocaleDateString() : "N/A"
+                          )}
 
                           {/* 3. Client Name */}
-                          <td className="px-4 py-4 text-xs font-black text-white uppercase whitespace-nowrap">
-                            {order["Name"] || "Anonymous"}
-                          </td>
+                          {renderEditableTextCell("Name", "Anonymous", order)}
 
                           {/* 4. Phone Num */}
-                          <td className="px-4 py-4 text-[11px] font-mono text-white/80 whitespace-nowrap">
-                            {order["Contact number"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("Contact number", "N/A", order)}
 
                           {/* 5. Start Date */}
-                          <td className="px-4 py-4 text-[10px] font-mono text-afterhours-cyan/80 whitespace-nowrap">
-                            {order["Start date"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("Start date", "N/A", order)}
 
                           {/* 6. End Date */}
-                          <td className="px-4 py-4 text-[10px] font-mono text-afterhours-pink/80 whitespace-nowrap">
-                            {order["End date"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("End date", "N/A", order)}
 
                           {/* 7. Order Type */}
                           {renderEditableTextCell("Order Type", "Online", order)}
 
                           {/* 8. Item Rented */}
-                          <td className="px-4 py-4 text-[11px] text-white/70 max-w-[200px] leading-relaxed whitespace-pre-wrap">
-                            {order["Assets"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("Assets", "N/A", order)}
 
                           {/* 9. Add-Ons */}
-                          <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap uppercase tracking-wider">
-                            {order["Addon"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("Addon", "N/A", order)}
 
                           {/* 10. Location Link */}
-                          <td className="px-4 py-4 text-xs whitespace-nowrap">
-                            {(() => {
-                              const rawLoc = order.location || order.locationLink || order.address;
-                              if (!rawLoc) return <span className="text-white/30 italic font-mono text-[10px]">N/A</span>;
-                              
+                          {(() => {
+                            const rawLoc = order.location || order.locationLink || order.address || "";
+                            const displayLocation = (() => {
+                              if (!rawLoc) return undefined;
                               const isUrl = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(rawLoc.trim()) || 
                                             rawLoc.trim().includes("maps.google") || 
                                             rawLoc.trim().includes("maps.app.goo.gl");
@@ -1683,6 +1714,7 @@ export function AdminDashboard() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-afterhours-cyan hover:text-white hover:underline font-bold transition-all text-[11px] uppercase tracking-wider"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     📍 View Map ➔
                                   </a>
@@ -1693,23 +1725,28 @@ export function AdminDashboard() {
                                   {rawLoc}
                                 </span>
                               );
-                            })()}
-                          </td>
+                            })();
+                            return renderEditableTextCell("location", "", order, displayLocation ? (displayLocation as any) : undefined);
+                          })()}
 
                           {/* 11. KYC Doc */}
-                          <td className="px-4 py-4 text-center whitespace-nowrap">
-                            {order["KYC Document URL"] ? (
+                          {(() => {
+                            const kycUrl = order["KYC Document URL"] || "";
+                            const displayKyc = kycUrl ? (
                               <button
-                                onClick={() => setKycModalUrl(order["KYC Document URL"])}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setKycModalUrl(kycUrl);
+                                }}
                                 className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 hover:border-afterhours-purple/80 rounded-lg transition-all cursor-pointer flex items-center gap-1 mx-auto"
                               >
                                 <Eye size={10} />
                                 <span>View KYC</span>
                               </button>
-                            ) : (
-                              <span className="text-[9px] font-bold text-white/20 italic uppercase tracking-wider block">No Document</span>
-                            )}
-                          </td>
+                            ) : undefined;
+                            return renderEditableTextCell("KYC Document URL", "", order, displayKyc ? (displayKyc as any) : undefined);
+                          })()}
 
                           {/* 12. Rent Amount */}
                           {renderEditableTextCell("Rent Amount", "", order)}
@@ -1727,9 +1764,7 @@ export function AdminDashboard() {
                           {renderEditableTextCell("Security Dep.", "", order)}
 
                           {/* 17. Token Paid */}
-                          <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-green whitespace-nowrap">
-                            {order["Paid amt"] || "N/A"}
-                          </td>
+                          {renderEditableTextCell("Paid amt", "", order)}
 
                           {/* 18. To Collect (Remaining amt) - Inline Editable */}
                           {renderEditableTextCell("Remaining amt", "₹0", order)}
@@ -1807,6 +1842,17 @@ export function AdminDashboard() {
 
                           {/* 21. Managed By */}
                           {renderEditableTextCell("Managed By", "", order)}
+
+                          {/* 22. Actions */}
+                          <td className="px-4 py-4 text-center whitespace-nowrap">
+                            <button
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg border border-red-500/20 hover:border-red-500 transition-all cursor-pointer inline-flex items-center justify-center"
+                              title="Delete this order"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}
