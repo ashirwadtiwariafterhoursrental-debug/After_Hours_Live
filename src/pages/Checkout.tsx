@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, ShieldCheck, CreditCard, Sparkles, Check, 
@@ -10,7 +10,7 @@ import { fixedPriceCodes } from "../lib/fixedPriceCodes";
 import { db, storage, auth, handleFirestoreError, OperationType } from "../firebase";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, doc, runTransaction, setDoc } from "firebase/firestore";
+import { collection, addDoc, doc, runTransaction, setDoc, getDocs, getDoc } from "firebase/firestore";
 
 interface CheckoutItem {
   id: string;
@@ -44,6 +44,199 @@ export function Checkout() {
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [paymentError, setPaymentError] = useState("");
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [assignedUnits, setAssignedUnits] = useState<string[]>([]);
+
+  const checkDatesOverlap = (oStartStr: string, oEndStr: string, rStartStr: string, rEndStr: string) => {
+    if (!oStartStr || !oEndStr || !rStartStr || !rEndStr) return false;
+    const oStart = new Date(oStartStr).getTime();
+    const oEnd = new Date(oEndStr).getTime();
+    const rStart = new Date(rStartStr).getTime();
+    const rEnd = new Date(rEndStr).getTime();
+    return oStart <= rEnd && oEnd >= rStart;
+  };
+
+  const checkInventoryAvailability = async (): Promise<string[] | null> => {
+    if (!checkoutData) return [];
+    try {
+      const ordersSnapshot = await getDocs(collection(db, "orders"));
+      const ordersCol: any[] = [];
+      ordersSnapshot.forEach(docSnap => {
+        ordersCol.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      const bookedUnits = new Set<string>();
+      ordersCol.forEach(order => {
+        const oStart = order["Start date"] || order.startDate;
+        const oEnd = order["End date"] || order.endDate;
+        const status = order.Status || order.status || "Pending";
+        
+        if (status === "Completed" || status === "Cancelled") return;
+
+        if (checkDatesOverlap(oStart, oEnd, checkoutData.startDate, checkoutData.endDate)) {
+          const units = order.assignedUnits || [];
+          if (Array.isArray(units)) {
+            units.forEach((u: string) => bookedUnits.add(u));
+          } else if (typeof units === 'string') {
+            bookedUnits.add(units);
+          }
+        }
+      });
+
+      // Fetch dynamic unified categories and units
+      const categoriesSnapshot = await getDocs(collection(db, "inventory_vault"));
+      const categories: any[] = [];
+      categoriesSnapshot.forEach(docSnap => {
+        categories.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      const allUnits: any[] = [];
+      for (const cat of categories) {
+        const unitsSnapshot = await getDocs(collection(db, "inventory_vault", cat.id, "units"));
+        unitsSnapshot.forEach(docSnap => {
+          allUnits.push({ 
+            id: docSnap.id, 
+            categoryId: cat.id, 
+            categoryName: cat.name, 
+            categoryType: cat.type, 
+            name: docSnap.data().name 
+          });
+        });
+      }
+
+      let finalCategories = [...categories];
+      let finalUnits = [...allUnits];
+
+      // Safe fallback default keys if master inventory is empty
+      if (finalCategories.length === 0) {
+        finalCategories = [
+          { id: "cat-ps5", name: "PS5 Console", type: "gear" },
+          { id: "cat-projector", name: "Full HD Projector", type: "gear" },
+          { id: "cat-speaker", name: "JBL Party Speaker", type: "gear" },
+          { id: "cat-vr2", name: "Sony PlayStation VR2", type: "gear" },
+          { id: "cat-wheel", name: "Logitech G29 Racing Wheel", type: "gear" },
+          { id: "cat-controller", name: "Extra Controller", type: "addon" },
+          { id: "cat-screen", name: "Projector Screen", type: "addon" },
+          { id: "cat-tripod", name: "Heavy Duty Tripod", type: "addon" },
+          { id: "cat-mic", name: "Wireless Mic", type: "addon" },
+          { id: "cat-bat", name: "Meta Shots Bat", type: "addon" },
+          { id: "cat-games", name: "Premium Games", type: "addon" }
+        ];
+
+        finalUnits = [
+          { id: "u-ps1", categoryId: "cat-ps5", categoryName: "PS5 Console", categoryType: "gear", name: "PS5 - Unit A" },
+          { id: "u-ps2", categoryId: "cat-ps5", categoryName: "PS5 Console", categoryType: "gear", name: "PS5 - Unit B" },
+          { id: "u-proj1", categoryId: "cat-projector", categoryName: "Full HD Projector", categoryType: "gear", name: "Projector - Unit 1" },
+          { id: "u-proj2", categoryId: "cat-projector", categoryName: "Full HD Projector", categoryType: "gear", name: "Projector - Unit 2" },
+          { id: "u-pk1", categoryId: "cat-speaker", categoryName: "JBL Party Speaker", categoryType: "gear", name: "Speaker - Unit 1" },
+          { id: "u-pk2", categoryId: "cat-speaker", categoryName: "JBL Party Speaker", categoryType: "gear", name: "Speaker - Unit 2" },
+          { id: "u-vr1", categoryId: "cat-vr2", categoryName: "Sony PlayStation VR2", categoryType: "gear", name: "VR2 - Unit A" },
+          { id: "u-wheel1", categoryId: "cat-wheel", categoryName: "Logitech G29 Racing Wheel", categoryType: "gear", name: "Racing Wheel - Unit 1" },
+          
+          { id: "u-ctrl1", categoryId: "cat-controller", categoryName: "Extra Controller", categoryType: "addon", name: "Controller Unit 1" },
+          { id: "u-ctrl2", categoryId: "cat-controller", categoryName: "Extra Controller", categoryType: "addon", name: "Controller Unit 2" },
+          { id: "u-ctrl3", categoryId: "cat-controller", categoryName: "Extra Controller", categoryType: "addon", name: "Controller Unit 3" },
+          { id: "u-ctrl4", categoryId: "cat-controller", categoryName: "Extra Controller", categoryType: "addon", name: "Controller Unit 4" },
+          { id: "u-ctrl5", categoryId: "cat-controller", categoryName: "Extra Controller", categoryType: "addon", name: "Controller Unit 5" },
+          { id: "u-scr1", categoryId: "cat-screen", categoryName: "Projector Screen", categoryType: "addon", name: "Screen Unit 1" },
+          { id: "u-scr2", categoryId: "cat-screen", categoryName: "Projector Screen", categoryType: "addon", name: "Screen Unit 2" },
+          { id: "u-scr3", categoryId: "cat-screen", categoryName: "Projector Screen", categoryType: "addon", name: "Screen Unit 3" },
+          { id: "u-scr4", categoryId: "cat-screen", categoryName: "Projector Screen", categoryType: "addon", name: "Screen Unit 4" },
+          { id: "u-trip1", categoryId: "cat-tripod", categoryName: "Heavy Duty Tripod", categoryType: "addon", name: "Tripod Unit 1" },
+          { id: "u-trip2", categoryId: "cat-tripod", categoryName: "Heavy Duty Tripod", categoryType: "addon", name: "Tripod Unit 2" },
+          { id: "u-trip3", categoryId: "cat-tripod", categoryName: "Heavy Duty Tripod", categoryType: "addon", name: "Tripod Unit 3" },
+          { id: "u-trip4", categoryId: "cat-tripod", categoryName: "Heavy Duty Tripod", categoryType: "addon", name: "Tripod Unit 4" },
+          { id: "u-mic1", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 1" },
+          { id: "u-mic2", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 2" },
+          { id: "u-mic3", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 3" },
+          { id: "u-mic4", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 4" },
+          { id: "u-mic5", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 5" },
+          { id: "u-mic6", categoryId: "cat-mic", categoryName: "Wireless Mic", categoryType: "addon", name: "Mic Unit 6" },
+          { id: "u-bat1", categoryId: "cat-bat", categoryName: "Meta Shots Bat", categoryType: "addon", name: "Bat Unit 1" },
+          { id: "u-bat2", categoryId: "cat-bat", categoryName: "Meta Shots Bat", categoryType: "addon", name: "Bat Unit 2" },
+          { id: "u-game1", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 1" },
+          { id: "u-game2", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 2" },
+          { id: "u-game3", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 3" },
+          { id: "u-game4", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 4" },
+          { id: "u-game5", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 5" },
+          { id: "u-game6", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 6" },
+          { id: "u-game7", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 7" },
+          { id: "u-game8", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 8" },
+          { id: "u-game9", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 9" },
+          { id: "u-game10", categoryId: "cat-games", categoryName: "Premium Games", categoryType: "addon", name: "Game Unit 10" }
+        ];
+      }
+
+      const assigned: string[] = [];
+      for (const item of checkoutData.cart) {
+        const itemId = item.id;
+        const requiredCategories: string[] = [];
+
+        if (itemId === "combo-theatre") {
+          requiredCategories.push("PS5 Console", "Full HD Projector");
+        } else if (itemId === "combo-party") {
+          requiredCategories.push("PS5 Console", "Full HD Projector", "JBL Party Speaker");
+        } else if (itemId === "hw-ps5") {
+          requiredCategories.push("PS5 Console");
+        } else if (itemId === "hw-projector") {
+          requiredCategories.push("Full HD Projector");
+        } else if (itemId === "hw-speaker") {
+          requiredCategories.push("JBL Party Speaker");
+        } else if (itemId === "hw-vr2") {
+          requiredCategories.push("Sony PlayStation VR2");
+        } else if (itemId === "hw-wheel") {
+          requiredCategories.push("Logitech G29 Racing Wheel");
+        } else if (itemId === "addon-controller") {
+          requiredCategories.push("Extra Controller");
+        } else if (itemId === "addon-screen") {
+          requiredCategories.push("Projector Screen");
+        } else if (itemId === "addon-tripod") {
+          requiredCategories.push("Heavy Duty Tripod");
+        } else if (itemId === "addon-mic") {
+          requiredCategories.push("Wireless Mic");
+        } else if (itemId === "addon-bat") {
+          requiredCategories.push("Meta Shots Bat");
+        } else if (itemId.startsWith("addon-game-")) {
+          requiredCategories.push("Premium Games");
+        }
+
+        for (const catName of requiredCategories) {
+          const matchedCategory = finalCategories.find(cat => {
+            const normCatName = cat.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+            const normTargetName = catName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            return normCatName.includes(normTargetName) || normTargetName.includes(normCatName);
+          });
+
+          if (!matchedCategory) {
+            console.warn(`Category matching name: "${catName}" not registered in master vault!`);
+            return null;
+          }
+
+          const categoryUnits = finalUnits.filter(u => u.categoryId === matchedCategory.id);
+          const requestedQty = itemId.startsWith("addon-") ? (item.quantity || 1) : 1;
+
+          const availableUnits = categoryUnits.filter(unit => 
+            !bookedUnits.has(unit.name) && 
+            !assigned.includes(unit.name)
+          );
+
+          if (availableUnits.length < requestedQty) {
+            console.warn(`Insufficient units for category: "${matchedCategory.name}". RequestedQty: ${requestedQty}, Available count: ${availableUnits.length}`);
+            return null;
+          }
+
+          for (let q = 0; q < requestedQty; q++) {
+            assigned.push(availableUnits[q].name);
+          }
+        }
+      }
+
+      return assigned;
+    } catch (err) {
+      console.error("Error verifying availability:", err);
+      return [];
+    }
+  };
 
   // States for dynamic SPECIAL Custom Deposit code on payment page
   const [checkoutSpecialCode, setCheckoutSpecialCode] = useState("");
@@ -65,6 +258,7 @@ export function Checkout() {
   const [fileName, setFileName] = useState("");
   const [fileMimeType, setFileMimeType] = useState("");
   const [fileError, setFileError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Forced Authentication states (before delivery details form can be submitted)
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -257,7 +451,7 @@ export function Checkout() {
     reader.readAsDataURL(file);
   };
 
-  const handleRazorpayPayment = () => {
+  const handleRazorpayPayment = async () => {
     if (!isRazorpayLoaded) {
       alert("Razorpay payment gateway is still loading. Please try again in a moment.");
       return;
@@ -265,6 +459,16 @@ export function Checkout() {
 
     setIsProcessing(true);
     setPaymentError("");
+    setAvailabilityError("");
+
+    const assigned = await checkInventoryAvailability();
+    if (assigned === null) {
+      setIsProcessing(false);
+      setAvailabilityError("This asset is fully deployed during these dates. Please select alternative dates or join our waitlist.");
+      return;
+    }
+    setAssignedUnits(assigned);
+
     const amountToPay = calculatePaymentAmount();
 
     // Razorpay Integration Options
@@ -463,9 +667,21 @@ Here are my remaining details for delivery:
       setDeliveryError("Delivery Location Google Maps Link is required.");
       return;
     }
+    if (!termsAccepted) {
+      setDeliveryError("You must read and accept the Terms and Conditions to proceed.");
+      return;
+    }
 
     setIsSyncingDelivery(true);
     try {
+      // Final re-verification of date block allocation
+      const assigned = await checkInventoryAvailability();
+      if (assigned === null) {
+        setIsSyncingDelivery(false);
+        setDeliveryError("This asset is fully deployed during these dates. Please select alternative dates or join our waitlist.");
+        return;
+      }
+
       // 1. Generate/retrieve the sequential Order ID via transition on metadata/orderCounter
       let newOrderId = 1004;
       try {
@@ -518,10 +734,37 @@ Here are my remaining details for delivery:
         "KYC Document URL": fileUrl,
         "location": deliveryLocation,
         "locationLink": deliveryLocation,
-        "address": deliveryLocation
+        "address": deliveryLocation,
+        "assignedUnits": assigned
       };
 
       await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);
+
+      // --- OUTBOUND WEBHOOK NOTIFICATION (Task 5) ---
+      try {
+        const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || "https://api.afterhours.com/v1/order-webhook";
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            orderId: `Order-${newOrderId}`,
+            clientName: deliveryName,
+            phoneNumber: deliveryPhone,
+            itemRented: bookingItemsStr,
+            startDate: startDate || "",
+            endDate: endDate || "",
+            totalRevenue: `₹${finalTotal}`,
+            tokenPaid: totalPaidStr,
+            toCollect: remainingAmtStr,
+            assignedUnits: assigned,
+            location: deliveryLocation
+          })
+        });
+      } catch (webhookErr) {
+        console.warn("Outbound webhook notify failed (silently caught):", webhookErr);
+      }
 
       setDeliverySynced(true);
     } catch (err: any) {
@@ -898,6 +1141,15 @@ Here are my remaining details for delivery:
 
                 {/* TASK 3: CALL TO ACTION & RAZORPAY MODAL ACCELERATOR */}
                 <div className="pt-6 border-t border-white/5 space-y-4">
+                  {availabilityError && (
+                    <div className="flex items-start gap-2.5 p-4 bg-yellow-950/45 border border-yellow-500/25 rounded-2xl text-yellow-400 text-xs leading-relaxed font-mono">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-yellow-500" />
+                      <div>
+                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-yellow-300 font-bold">Operational Alert:</strong>
+                        {availabilityError}
+                      </div>
+                    </div>
+                  )}
                   {paymentError && (
                     <div className="flex items-center gap-2 p-4 bg-red-950/40 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
                       <AlertCircle size={16} /> {paymentError}
@@ -1187,6 +1439,29 @@ Here are my remaining details for delivery:
                       )}
                     </div>
 
+                    {/* Mandatory Legal Consent Checkbox */}
+                    <div className="md:col-span-2 pt-4 border-t border-white/5 space-y-2">
+                      <label className="relative flex items-start gap-3 cursor-pointer select-none group">
+                        <input
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="mt-1 accent-afterhours-purple w-4 h-4 rounded border-white/10 bg-black/30 focus:ring-1 focus:ring-afterhours-purple cursor-pointer shrink-0"
+                        />
+                        <span className="text-xs text-white/70 group-hover:text-white transition-colors leading-relaxed font-sans font-medium">
+                          I have read and accept the{" "}
+                          <Link
+                            to="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-afterhours-cyan hover:text-afterhours-pink underline font-bold transition-colors inline-block"
+                          >
+                            Terms and Conditions
+                          </Link>
+                        </span>
+                      </label>
+                    </div>
+
                   </div>
                 </div>
 
@@ -1198,8 +1473,8 @@ Here are my remaining details for delivery:
 
                 <button
                   type="submit"
-                  disabled={isSyncingDelivery}
-                  className="w-full py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.01] active:scale-98 shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSyncingDelivery || !termsAccepted}
+                  className="w-full py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.01] active:scale-98 shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none"
                 >
                   {isSyncingDelivery ? (
                     <>

@@ -9,6 +9,7 @@ import { Rentals } from "./pages/Rentals";
 import { Blog } from "./pages/Blog";
 import { Contact } from "./pages/Contact";
 import { Checkout } from "./pages/Checkout";
+import { Terms } from "./pages/Terms";
 import { AdminLogin } from "./pages/AdminLogin";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { CustomerLogin } from "./pages/CustomerLogin";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/blog" element={<Blog />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={
             <ProtectedAdminRoute>

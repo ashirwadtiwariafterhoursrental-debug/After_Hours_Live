@@ -204,16 +204,17 @@ export function Rentals() {
   }, []);
 
   // --- Firebase Dynamic Gear Media Subscription ---
-  const [dynamicGearMedia, setDynamicGearMedia] = useState<Record<string, { mediaUrl: string; mediaType: "image" | "video" }>>({});
+  const [dynamicGearMedia, setDynamicGearMedia] = useState<Record<string, { mediaUrl: string; mediaUrls?: string[]; mediaType: "image" | "video" }>>({});
   useEffect(() => {
     const q = query(collection(db, "gear_catalog"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const mapping: Record<string, { mediaUrl: string; mediaType: "image" | "video" }> = {};
+      const mapping: Record<string, { mediaUrl: string; mediaUrls?: string[]; mediaType: "image" | "video" }> = {};
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.mediaUrl) {
           mapping[doc.id] = {
             mediaUrl: data.mediaUrl,
+            mediaUrls: data.mediaUrls || [data.mediaUrl],
             mediaType: data.mediaType || "image"
           };
         }
@@ -226,17 +227,18 @@ export function Rentals() {
   }, []);
 
   // --- Firebase Addon Media Subscription ---
-  const [addonMedia, setAddonMedia] = useState<Record<string, { photoUrl: string; videoUrl: string }>>({});
+  const [addonMedia, setAddonMedia] = useState<Record<string, { photoUrl: string; videoUrl: string; mediaUrls?: string[] }>>({});
   useEffect(() => {
     const q = query(collection(db, "addon_media"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const mapping: Record<string, { photoUrl: string; videoUrl: string }> = {};
+      const mapping: Record<string, { photoUrl: string; videoUrl: string; mediaUrls?: string[] }> = {};
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.photoUrl || data.videoUrl) {
           mapping[doc.id] = {
             photoUrl: data.photoUrl || "",
-            videoUrl: data.videoUrl || ""
+            videoUrl: data.videoUrl || "",
+            mediaUrls: data.mediaUrls || (data.photoUrl ? [data.photoUrl] : [])
           };
         }
       });
@@ -261,6 +263,7 @@ export function Rentals() {
         photoUrl={media.photoUrl} 
         videoUrl={media.videoUrl} 
         addonName={addonName} 
+        mediaUrls={media.mediaUrls}
       />
     );
   };
@@ -844,7 +847,11 @@ export function Rentals() {
                       dynamicGearMedia[combo.id].mediaType === "video" ? (
                         <video src={dynamicGearMedia[combo.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
                       ) : (
-                        <img src={dynamicGearMedia[combo.id].mediaUrl} alt={combo.name} className="absolute inset-0 w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
+                        <MediaCarousel
+                          mediaUrls={dynamicGearMedia[combo.id].mediaUrls || [dynamicGearMedia[combo.id].mediaUrl]}
+                          className="absolute inset-0 w-full h-full rounded-2xl"
+                          itemTitle={combo.name}
+                        />
                       )
                     ) : (
                       <>
@@ -909,7 +916,11 @@ export function Rentals() {
                         dynamicGearMedia[item.id].mediaType === "video" ? (
                           <video src={dynamicGearMedia[item.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
                         ) : (
-                          <img src={dynamicGearMedia[item.id].mediaUrl} alt={item.name} className="absolute inset-0 w-full h-full object-cover rounded-2xl" referrerPolicy="no-referrer" />
+                          <MediaCarousel
+                            mediaUrls={dynamicGearMedia[item.id].mediaUrls || [dynamicGearMedia[item.id].mediaUrl]}
+                            className="absolute inset-0 w-full h-full rounded-2xl"
+                            itemTitle={item.name}
+                          />
                         )
                       ) : (
                         <>
@@ -1425,8 +1436,8 @@ export function Rentals() {
                           <Gamepad2 size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Extra Controller</h5>
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Extra Controller</h5>
                             <input
                               type="checkbox"
                               checked={addExtraController}
@@ -1464,8 +1475,8 @@ export function Rentals() {
                           <Monitor size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Projector Screen</h5>
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Projector Screen</h5>
                             <input
                               type="checkbox"
                               checked={addProjectorScreen}
@@ -1503,8 +1514,8 @@ export function Rentals() {
                           <Maximize size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Heavy Duty Tripod</h5>
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Heavy Duty Tripod</h5>
                             <input
                               type="checkbox"
                               checked={addHeavyDutyTripod}
@@ -1542,8 +1553,8 @@ export function Rentals() {
                           <Mic size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Wireless Mic</h5>
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Wireless Mic</h5>
                             <input
                               type="checkbox"
                               checked={addWirelessMic}
@@ -1581,8 +1592,8 @@ export function Rentals() {
                           <Zap size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white truncate">Meta Shots Bat</h5>
+                          <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Meta Shots Bat</h5>
                             <input
                               type="checkbox"
                               checked={addMetaShotsBat}
@@ -1868,8 +1879,19 @@ export function Rentals() {
   );
 }
 
-function AddonHoverPlayer({ photoUrl, videoUrl, addonName }: { photoUrl: string; videoUrl: string; addonName: string }) {
+function AddonHoverPlayer({ photoUrl, videoUrl, addonName, mediaUrls = [] }: { photoUrl: string; videoUrl: string; addonName: string; mediaUrls?: string[] }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (isHovered || !mediaUrls || mediaUrls.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex(prev => (prev + 1) % mediaUrls.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [mediaUrls, isHovered]);
+
+  const activePhoto = mediaUrls.length > 0 ? mediaUrls[index] : photoUrl;
 
   return (
     <div
@@ -1889,13 +1911,20 @@ function AddonHoverPlayer({ photoUrl, videoUrl, addonName }: { photoUrl: string;
           className="w-full h-full object-cover"
         />
       ) : (
-        photoUrl ? (
-          <img
-            src={photoUrl}
-            alt={addonName}
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+        activePhoto ? (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.img
+              key={activePhoto}
+              src={activePhoto}
+              alt={addonName}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0 w-full h-full object-cover rounded-2xl"
+              referrerPolicy="no-referrer"
+            />
+          </AnimatePresence>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/20 bg-white/[0.02]">
             <Image size={16} />
@@ -1904,13 +1933,79 @@ function AddonHoverPlayer({ photoUrl, videoUrl, addonName }: { photoUrl: string;
       )}
 
       {videoUrl && !isHovered && (
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none z-10">
           <div className="p-1 px-1.5 bg-afterhours-cyan/85 backdrop-blur-sm rounded-full text-black shadow-lg flex items-center gap-1 scale-90">
             <Play size={8} className="fill-current" />
-            <span className="text-[8px] font-black uppercase tracking-wider font-mono">DEMO</span>
+            <span className="text-[8px] font-black uppercase tracking-wider font-mono font-bold">DEMO</span>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface MediaCarouselProps {
+  mediaUrls: string[];
+  autoPlayInterval?: number;
+  className?: string;
+  itemTitle?: string;
+}
+
+export function MediaCarousel({ mediaUrls, autoPlayInterval = 3000, className = "", itemTitle = "" }: MediaCarouselProps) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!mediaUrls || mediaUrls.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex(prev => (prev + 1) % mediaUrls.length);
+    }, autoPlayInterval);
+    return () => clearInterval(interval);
+  }, [mediaUrls, autoPlayInterval]);
+
+  if (!mediaUrls || mediaUrls.length === 0) {
+    return null;
+  }
+
+  if (mediaUrls.length === 1) {
+    return (
+      <img
+        src={mediaUrls[0]}
+        alt={itemTitle}
+        className={`${className} object-cover`}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.img
+          key={index}
+          src={mediaUrls[index]}
+          alt={`${itemTitle} slide ${index + 1}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          className="absolute inset-0 w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      </AnimatePresence>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+        {mediaUrls.map((_, i) => (
+          <button
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex(i);
+            }}
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              i === index ? "bg-afterhours-cyan w-3.5 scale-110" : "bg-white/40 hover:bg-white/60"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }

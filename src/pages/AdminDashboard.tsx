@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, FormEvent, DragEvent, ChangeEvent, useMemo
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, writeBatch, getDocs } from "firebase/firestore";
 import { auth, db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
-import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play } from "lucide-react";
+import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play, Calendar, Monitor, Maximize, Mic, Zap } from "lucide-react";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -45,6 +45,8 @@ export function AdminDashboard() {
   const [selectedAssetId, setSelectedAssetId] = useState<string>("combo-theatre");
   const [assetPhoto, setAssetPhoto] = useState<File | null>(null);
   const [assetPhotoPreview, setAssetPhotoPreview] = useState<string | null>(null);
+  const [assetPhotos, setAssetPhotos] = useState<File[]>([]);
+  const [assetPhotoPreviews, setAssetPhotoPreviews] = useState<string[]>([]);
 
   // Form states - Addon preview assets (preview photo and video)
   const [addonPhoto, setAddonPhoto] = useState<File | null>(null);
@@ -103,11 +105,258 @@ export function AdminDashboard() {
   ];
 
   // Route protection, layout tabs, & operational states
-  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "content">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "content" | "calendar" | "vault">("orders");
   const [orders, setOrders] = useState<any[]>([]);
   const [waitlistItems, setWaitlistItems] = useState<any[]>([]);
   const [kycModalUrl, setKycModalUrl] = useState<string | null>(null);
   const [updatingOrderStatusId, setUpdatingOrderStatusId] = useState<string | null>(null);
+
+  // --- Operational Excel Upgrade / Inline Editor ---
+  const [editingCell, setEditingCell] = useState<{ orderId: string; field: string } | null>(null);
+  const [tempValue, setTempValue] = useState<string>("");
+
+  // --- Visual Availability Calendar States ---
+  const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
+  const [selectedAssetUnit, setSelectedAssetUnit] = useState<string>("");
+  const [calendarMode, setCalendarMode] = useState<"gears" | "addons">("gears");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // --- Inventory Vault States (Dynamic Inventory Architecture) ---
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [unitsMap, setUnitsMap] = useState<Record<string, any[]>>({}); // categoryId -> list of units
+  
+  // Real-time subscription to dynamic inventory_vault categories
+  useEffect(() => {
+    const q = query(collection(db, "inventory_vault"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach(docSnap => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setCategoriesList(list);
+    }, (err) => {
+      console.error("Error subscribing to inventory_vault:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time subscription to units of each category
+  useEffect(() => {
+    if (categoriesList.length === 0) return;
+    
+    const unsubscribes = categoriesList.map(cat => {
+      return onSnapshot(collection(db, "inventory_vault", cat.id, "units"), (snapshot) => {
+        const units: any[] = [];
+        snapshot.forEach(docSnap => {
+          units.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setUnitsMap(prev => ({
+          ...prev,
+          [cat.id]: units
+        }));
+      }, (err) => {
+        console.error(`Error subscribing to units of category ${cat.name}:`, err);
+      });
+    });
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [categoriesList]);
+
+  // Unified Gear Units assembled dynamically for UI
+  const allGearUnitsList = categoriesList
+    .filter(cat => cat.type === "gear")
+    .flatMap(cat => {
+      const units = unitsMap[cat.id] || [];
+      return units.map(u => ({
+        id: u.id,
+        name: u.name,
+        categoryName: cat.name,
+        categoryId: cat.id
+      }));
+    });
+
+  // Selected state for Visual Calendar filter dropdown
+  const [selectedCalendarAddonId, setSelectedCalendarAddonId] = useState("");
+
+  // Auto-set first unit when allGearUnitsList becomes available or changes
+  useEffect(() => {
+    if (allGearUnitsList.length > 0 && (!selectedAssetUnit || !allGearUnitsList.some(gu => gu.name === selectedAssetUnit))) {
+      setSelectedAssetUnit(allGearUnitsList[0].name);
+    }
+  }, [allGearUnitsList, selectedAssetUnit]);
+
+  // Synchronize category first option for Addons mode dropdown selection
+  useEffect(() => {
+    const addonCategories = categoriesList.filter(c => c.type === "addon");
+    if (addonCategories.length > 0 && !selectedCalendarAddonId) {
+      setSelectedCalendarAddonId(addonCategories[0].id);
+    }
+  }, [categoriesList, selectedCalendarAddonId]);
+
+  // Form & Modification states for Master Category additions
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatType, setNewCatType] = useState<"gear" | "addon">("gear");
+  const [newUnitNames, setNewUnitNames] = useState<Record<string, string>>({}); // categoryId -> input field draft name
+
+  const handleBootstrapVault = async () => {
+    if (categoriesList.length > 0) {
+      if (!confirm("An existing inventory structure is already online! Are you sure you want to add fallback defaults on top?")) {
+        return;
+      }
+    }
+    try {
+      const bootstrapCategories = [
+        { name: "PS5 Console", type: "gear", units: ["PS5 - Unit A", "PS5 - Unit B"] },
+        { name: "Full HD Projector", type: "gear", units: ["Projector - Unit 1", "Projector - Unit 2"] },
+        { name: "JBL Party Speaker", type: "gear", units: ["Speaker - Unit 1", "Speaker - Unit 2"] },
+        { name: "Sony PlayStation VR2", type: "gear", units: ["VR2 - Unit A"] },
+        { name: "Logitech G29 Racing Wheel", type: "gear", units: ["Racing Wheel - Unit 1"] },
+        { name: "Extra Controller", type: "addon", units: ["Controller Unit 1", "Controller Unit 2", "Controller Unit 3", "Controller Unit 4", "Controller Unit 5"] },
+        { name: "Projector Screen", type: "addon", units: ["Screen Unit 1", "Screen Unit 2", "Screen Unit 3", "Screen Unit 4"] },
+        { name: "Heavy Duty Tripod", type: "addon", units: ["Tripod Unit 1", "Tripod Unit 2", "Tripod Unit 3", "Tripod Unit 4"] },
+        { name: "Wireless Mic", type: "addon", units: ["Mic Unit 1", "Mic Unit 2", "Mic Unit 3", "Mic Unit 4", "Mic Unit 5", "Mic Unit 6"] },
+        { name: "Meta Shots Bat", type: "addon", units: ["Bat Unit 1", "Bat Unit 2"] },
+        { name: "Premium Games", type: "addon", units: ["Game Unit 1", "Game Unit 2", "Game Unit 3", "Game Unit 4", "Game Unit 5", "Game Unit 6", "Game Unit 7", "Game Unit 8", "Game Unit 9", "Game Unit 10"] }
+      ];
+
+      for (const item of bootstrapCategories) {
+        const catRef = await addDoc(collection(db, "inventory_vault"), {
+          name: item.name,
+          type: item.type,
+          createdAt: serverTimestamp()
+        });
+        for (const uName of item.units) {
+          await addDoc(collection(db, "inventory_vault", catRef.id, "units"), {
+            name: uName,
+            createdAt: serverTimestamp()
+          });
+        }
+      }
+      alert("Inventory Vault bootstrapped successfully with real production units!");
+    } catch (err) {
+      console.error("Error bootstrapping vault:", err);
+      alert("Failed to bootstrap vault: " + err);
+    }
+  };
+
+  const handleCreateCategory = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) {
+      alert("Please enter a category name first.");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "inventory_vault"), {
+        name: newCatName.trim(),
+        type: newCatType,
+        createdAt: serverTimestamp()
+      });
+      setNewCatName("");
+    } catch (err) {
+      console.error("Error creating category:", err);
+      alert("Failed to create category: " + err);
+    }
+  };
+
+  const handleAddUnitToCategory = async (catId: string) => {
+    const rawName = newUnitNames[catId] || "";
+    if (!rawName.trim()) {
+      alert("Please enter a Unit name first.");
+      return;
+    }
+    try {
+      await addDoc(collection(db, "inventory_vault", catId, "units"), {
+        name: rawName.trim(),
+        createdAt: serverTimestamp()
+      });
+      setNewUnitNames(prev => ({ ...prev, [catId]: "" }));
+    } catch (err) {
+      console.error("Error adding sub-unit:", err);
+      alert("Failed to register unit: " + err);
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string, name: string) => {
+    if (confirm(`Are you sure you want to delete the category "${name}" and all of its individual units from the master database?`)) {
+      try {
+        const unitsSnapshot = await getDocs(collection(db, "inventory_vault", catId, "units"));
+        const batch = writeBatch(db);
+        
+        // Delete each subdoc in units subcollection
+        unitsSnapshot.forEach(unitDoc => {
+          batch.delete(doc(db, "inventory_vault", catId, "units", unitDoc.id));
+        });
+        
+        // Delete parent category
+        batch.delete(doc(db, "inventory_vault", catId));
+        await batch.commit();
+      } catch (err) {
+        console.error("Error cascade deleting category:", err);
+        alert("Failed to delete category: " + err);
+      }
+    }
+  };
+
+  const handleDeleteUnit = async (catId: string, unitId: string) => {
+    if (confirm("Are you sure you want to delete this specific stock unit?")) {
+      try {
+        await deleteDoc(doc(db, "inventory_vault", catId, "units", unitId));
+      } catch (err) {
+        console.error("Error deleting sub unit:", err);
+        alert("Failed to delete unit: " + err);
+      }
+    }
+  };
+
+  const getSelectedAddonStatsForDay = (day: Date, catId: string) => {
+    if (!day || !catId) return { booked: 0, owned: 0, available: 0, unitStats: [] };
+    const targetTime = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+
+    const addonUnits = unitsMap[catId] || [];
+    const owned = addonUnits.length;
+
+    const activeOrders = orders.filter(order => {
+      const status = order.Status || order.status || "Pending";
+      if (status === "Cancelled" || status === "Completed") return false;
+
+      const startStr = order["Start date"] || order.startDate;
+      const endStr = order["End date"] || order.endDate;
+      if (!startStr || !endStr) return false;
+
+      const orderStart = new Date(startStr);
+      const startOnly = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate()).getTime();
+      const orderEnd = new Date(endStr);
+      const endOnly = new Date(orderEnd.getFullYear(), orderEnd.getMonth(), orderEnd.getDate()).getTime();
+
+      return targetTime >= startOnly && targetTime <= endOnly;
+    });
+
+    let bookedCount = 0;
+    const unitStats = addonUnits.map(unit => {
+      const isUnitBooked = activeOrders.some(order => {
+        const assigned = order.assignedUnits || [];
+        return Array.isArray(assigned) ? assigned.includes(unit.name) : assigned === unit.name;
+      });
+      if (isUnitBooked) {
+        bookedCount++;
+      }
+      return {
+        unitId: unit.id,
+        unitName: unit.name,
+        booked: isUnitBooked
+      };
+    });
+
+    return {
+      booked: bookedCount,
+      owned: owned,
+      available: Math.max(0, owned - bookedCount),
+      unitStats
+    };
+  };
 
   useEffect(() => {
     const isAdminAuthenticated = localStorage.getItem("isAdminAuthenticated") === "true";
@@ -288,41 +537,50 @@ export function AdminDashboard() {
     e.stopPropagation();
     setAssetDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      validateAndSetAssetPhoto(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files) as File[];
+      validateAndSetAssetPhotos(files);
     }
   };
 
   const handleAssetFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      validateAndSetAssetPhoto(file);
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files) as File[];
+      validateAndSetAssetPhotos(files);
     }
   };
 
-  const validateAndSetAssetPhoto = (file: File) => {
+  const validateAndSetAssetPhotos = (files: File[]) => {
     setAssetFormError("");
-    if (!file.type.startsWith("image/")) {
-      setAssetFormError("Asset file must be an image (PNG, JPG, WEBP, etc.).");
-      return;
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        setAssetFormError("All asset files must be images (PNG, JPG, WEBP, etc.).");
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setAssetFormError("All image file sizes must be less than 5MB.");
+        continue;
+      }
+      validFiles.push(file);
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setAssetFormError("Image file size must be less than 5MB.");
-      return;
+
+    if (validFiles.length > 0) {
+      setAssetPhotos(prev => [...prev, ...validFiles]);
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAssetPhotoPreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
-    setAssetPhoto(file);
-    
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAssetPhotoPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const removeAssetPhoto = () => {
-    setAssetPhoto(null);
-    setAssetPhotoPreview(null);
+    setAssetPhotos([]);
+    setAssetPhotoPreviews([]);
     if (assetFileInputRef.current) {
       assetFileInputRef.current.value = "";
     }
@@ -351,6 +609,213 @@ export function AdminDashboard() {
     } finally {
       setUpdatingOrderStatusId(null);
     }
+  };
+
+  const handleInlineSave = async (orderId: string, field: string, value: string) => {
+    setEditingCell(null);
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, {
+        [field]: value
+      });
+    } catch (err) {
+      console.error("Failed to inline save order:", err);
+    }
+  };
+
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    if (lines.length < 2) return [];
+
+    const result: any[] = [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const values = [];
+      let insideQuote = false;
+      let currentVal = "";
+
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          insideQuote = !insideQuote;
+        } else if (char === ',' && !insideQuote) {
+          values.push(currentVal.trim().replace(/^"|"$/g, ''));
+          currentVal = "";
+        } else {
+          currentVal += char;
+        }
+      }
+      values.push(currentVal.trim().replace(/^"|"$/g, ''));
+
+      const obj: Record<string, string> = {};
+      headers.forEach((h, index) => {
+        obj[h] = values[index] !== undefined ? values[index] : "";
+      });
+      result.push(obj);
+    }
+    return result;
+  };
+
+  const handleImportCSV = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target?.result as string;
+      if (!text) return;
+
+      try {
+        const parsedRows = parseCSV(text);
+        if (parsedRows.length === 0) {
+          alert("No valid rows found in CSV.");
+          return;
+        }
+
+        const batch = writeBatch(db);
+
+        parsedRows.forEach((row) => {
+          const orderId = row["Order Id"] || row["Order ID"] || `Import-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+          const isAssignedArr = row["assignedUnits"] ? row["assignedUnits"].split(";") : [];
+          
+          const payload = {
+            "Order ID": orderId,
+            "Order Date": row["Date"] || new Date().toISOString(),
+            "Name": row["Client Name"] || "Imported Legacy Client",
+            "Contact number": row["Phone Num"] || "N/A",
+            "Start date": row["Start Date"] || "",
+            "End date": row["End Date"] || "",
+            "Order Type": row["Order Type"] || "Legacy Import",
+            "Assets": row["Item Rented"] || "N/A",
+            "Addon": row["Add-Ons"] || "none",
+            "locationLink": row["Location Link"] || "",
+            "location": row["Location Link"] || "",
+            "KYC Document URL": row["KYC Doc"] || "",
+            "Rent Amount": row["Rent Amount"] || "",
+            "Extra Charges": row["Extra Charges"] || "",
+            "Additional Dis": row["Additional Dis"] || "",
+            "Total Revenue": row["Total Revenue"] || "",
+            "Security Dep.": row["Security Dep."] || "",
+            "Paid amt": row["Token Paid"] || "₹0",
+            "Remaining amt": row["To Collect"] || "₹0",
+            "Pay Status": row["Pay Status"] || "Paid",
+            "Status": row["Order Status"] || "Completed",
+            "Managed By": row["Managed By"] || "System",
+            "assignedUnits": isAssignedArr
+          };
+
+          const docRef = doc(db, "orders", orderId);
+          batch.set(docRef, payload, { merge: true });
+        });
+
+        await batch.commit();
+        alert(`Successfully imported ${parsedRows.length} legacy orders!`);
+      } catch (err: any) {
+        console.error("CSV Import failed:", err);
+        alert("Failed to parsing and importing CSV: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      "Order Id", "Date", "Client Name", "Phone Num", "Start Date", "End Date", 
+      "Order Type", "Item Rented", "Add-Ons", "Location Link", "KYC Doc", 
+      "Rent Amount", "Extra Charges", "Additional Dis", "Total Revenue", 
+      "Security Dep.", "Token Paid", "To Collect", "Pay Status", "Order Status", "Managed By", "assignedUnits"
+    ];
+
+    const rows = orders.map(order => [
+      order["Order ID"] || order.id || "",
+      order["Order Date"] || "",
+      order["Name"] || "",
+      order["Contact number"] || "",
+      order["Start date"] || "",
+      order["End date"] || "",
+      order["Order Type"] || "Online",
+      order["Assets"] || "",
+      order["Addon"] || "",
+      order["locationLink"] || order["location"] || "",
+      order["KYC Document URL"] || "",
+      order["Rent Amount"] || "",
+      order["Extra Charges"] || "",
+      order["Additional Dis"] || "",
+      order["Total Revenue"] || "",
+      order["Security Dep."] || "",
+      order["Paid amt"] || "",
+      order["Remaining amt"] || "",
+      order["Pay Status"] || "Pending",
+      order.Status || order.status || "Pending",
+      order["Managed By"] || "",
+      Array.isArray(order.assignedUnits) ? order.assignedUnits.join(";") : order.assignedUnits || ""
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => 
+        row.map(val => {
+          const stringVal = String(val).replace(/"/g, '""');
+          return stringVal.includes(",") || stringVal.includes("\n") || stringVal.includes('"') 
+            ? `"${stringVal}"` 
+            : stringVal;
+        }).join(",")
+      )
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const daysInMonth = useMemo(() => {
+    const days = [];
+    const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+    const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+      days.push(new Date(currentYear, currentMonth, d));
+    }
+    return days;
+  }, [currentMonth, currentYear]);
+
+  const getOrdersForDayAndUnit = (day: Date, unit: string) => {
+    if (!day) return [];
+    const targetTime = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+
+    return orders.filter(order => {
+      const startStr = order["Start date"] || order.startDate;
+      const endStr = order["End date"] || order.endDate;
+      if (!startStr || !endStr) return false;
+      
+      const orderStart = new Date(startStr);
+      const startOnly = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate()).getTime();
+      
+      const orderEnd = new Date(endStr);
+      const endOnly = new Date(orderEnd.getFullYear(), orderEnd.getMonth(), orderEnd.getDate()).getTime();
+
+      const isDateMatched = targetTime >= startOnly && targetTime <= endOnly;
+
+      const assigned = order.assignedUnits || [];
+      const hasUnit = Array.isArray(assigned)
+        ? assigned.includes(unit)
+        : assigned === unit;
+
+      return isDateMatched && hasUnit;
+    });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -428,13 +893,13 @@ export function AdminDashboard() {
     setAssetFormError("");
 
     if (assetCategory === "Add-ons") {
-      if (!addonPhoto) {
-        setAssetFormError("Please upload a Preview Photo for the Add-on.");
+      if (!addonPhoto && assetPhotos.length === 0) {
+        setAssetFormError("Please upload at least one Preview Photo for the Add-on.");
         return;
       }
     } else {
-      if (!assetPhoto) {
-        setAssetFormError("Please upload a photo for the web asset.");
+      if (assetPhotos.length === 0) {
+        setAssetFormError("Please upload at least one photo for the web asset.");
         return;
       }
     }
@@ -445,12 +910,27 @@ export function AdminDashboard() {
       if (assetCategory === "Add-ons") {
         let photoUrl = "";
         let videoUrl = "";
+        const mediaUrls: string[] = [];
 
+        // Upload addonPhoto if selected
         if (addonPhoto) {
           const photoPath = `addon_assets/${Date.now()}_${addonPhoto.name}`;
           const photoRef = ref(storage, photoPath);
           const uploadSnap = await uploadBytes(photoRef, addonPhoto);
           photoUrl = await getDownloadURL(uploadSnap.ref);
+          mediaUrls.push(photoUrl);
+        }
+
+        // Upload multiple selected photos if any
+        for (const file of assetPhotos) {
+          const fileRefPath = `addon_assets/${Date.now()}_${file.name}`;
+          const photoRef = ref(storage, fileRefPath);
+          const uploadSnap = await uploadBytes(photoRef, file);
+          const url = await getDownloadURL(uploadSnap.ref);
+          mediaUrls.push(url);
+          if (!photoUrl) {
+            photoUrl = url;
+          }
         }
 
         if (addonVideo) {
@@ -466,6 +946,7 @@ export function AdminDashboard() {
           addonName: selectedAssetId,
           photoUrl: photoUrl || "",
           videoUrl: videoUrl || "",
+          mediaUrls: mediaUrls.length > 0 ? mediaUrls : (photoUrl ? [photoUrl] : []),
           updatedAt: serverTimestamp()
         }, { merge: true });
 
@@ -474,42 +955,53 @@ export function AdminDashboard() {
         setAddonPhotoPreview(null);
         setAddonVideo(null);
         setAddonVideoPreview(null);
+        setAssetPhotos([]);
+        setAssetPhotoPreviews([]);
         if (addonPhotoInputRef.current) addonPhotoInputRef.current.value = "";
         if (addonVideoInputRef.current) addonVideoInputRef.current.value = "";
+        if (assetFileInputRef.current) assetFileInputRef.current.value = "";
       } else {
-        // 1. Upload to Firebase Storage
-        const storagePath = `website_assets/${Date.now()}_${assetPhoto.name}`;
-        const imageRef = ref(storage, storagePath);
-        
-        const uploadSnapshot = await uploadBytes(imageRef, assetPhoto!);
-        const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+        const mediaUrls: string[] = [];
+        let firstDownloadUrl = "";
 
-        // 2. Add document to Firestore 'site_images' collection (historical backup if needed)
-        const siteImagesPath = "site_images";
-        try {
-          await addDoc(collection(db, siteImagesPath), {
-            url: downloadUrl,
-            category: assetCategory,
-            productId: selectedAssetId,
-            createdAt: serverTimestamp()
-          });
-        } catch (firestoreError) {
-          console.warn("Soft warning: site_images backup failed:", firestoreError);
+        // Iterate and upload each file
+        for (const file of assetPhotos) {
+          const storagePath = `website_assets/${Date.now()}_${file.name}`;
+          const imageRef = ref(storage, storagePath);
+          const uploadSnapshot = await uploadBytes(imageRef, file);
+          const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+          
+          mediaUrls.push(downloadUrl);
+          if (!firstDownloadUrl) {
+            firstDownloadUrl = downloadUrl;
+          }
+
+          // Back up in site_images
+          try {
+            await addDoc(collection(db, "site_images"), {
+              url: downloadUrl,
+              category: assetCategory,
+              productId: selectedAssetId,
+              createdAt: serverTimestamp()
+            });
+          } catch (firestoreError) {
+            console.warn("Soft warning: site_images backup failed:", firestoreError);
+          }
         }
 
-        // 3. Directly tie the image to the specific product in 'gear_catalog'!
+        // 3. Directly tie the image(s) to the specific product in 'gear_catalog'!
         await setDoc(doc(db, "gear_catalog", selectedAssetId), {
           gearId: selectedAssetId,
           gearName: getProductNameById(selectedAssetId),
-          mediaUrl: downloadUrl,
+          mediaUrl: firstDownloadUrl,
+          mediaUrls: mediaUrls,
           mediaType: "image",
-          storagePath,
           updatedAt: serverTimestamp()
-        });
+        }, { merge: true });
 
         setAssetUploadSuccess(true);
-        setAssetPhoto(null);
-        setAssetPhotoPreview(null);
+        setAssetPhotos([]);
+        setAssetPhotoPreviews([]);
         if (assetFileInputRef.current) {
           assetFileInputRef.current.value = "";
         }
@@ -979,174 +1471,351 @@ export function AdminDashboard() {
             <Sliders size={13} />
             <span>Content Directors</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab("calendar")}
+            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "calendar"
+                ? "bg-gradient-to-r from-afterhours-green/15 to-afterhours-purple/15 border-afterhours-green/60 text-afterhours-green shadow-[0_0_15px_rgba(34,197,94,0.1)]"
+                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+            }`}
+          >
+            <Calendar size={13} />
+            <span>Availability Calendar</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("vault")}
+            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "vault"
+                ? "bg-gradient-to-r from-afterhours-cyan/15 to-afterhours-purple/15 border-afterhours-cyan/60 text-afterhours-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+            }`}
+          >
+            <Sliders size={13} className="text-afterhours-cyan" />
+            <span>Inventory Vault</span>
+          </button>
         </div>
 
         {/* TAB 1: EXCEL ORDER MATRIX */}
-        {activeTab === "orders" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-afterhours-cyan/10 border border-afterhours-cyan/25 p-2.5 rounded-xl text-afterhours-cyan">
-                  <ShoppingBag size={18} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase italic text-white">Excel-Style Order Matrix</h2>
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-mono">Live customer orders synced with Cloud Firestore</p>
-                </div>
-              </div>
-              <div className="text-[10px] font-mono text-white/45 bg-[#121215] border border-white/5 rounded-full px-3 py-1.5 self-start sm:self-auto uppercase tracking-wider">
-                Total Orders: <strong className="text-afterhours-cyan font-bold">{orders.length}</strong>
-              </div>
-            </div>
+        {activeTab === "orders" && (() => {
+          const isEditing = (field: string, orderId: string) => editingCell?.orderId === orderId && editingCell?.field === field;
 
-            <div className="w-full overflow-x-auto bg-[#0a0a0c]/80 border border-white/5 rounded-3xl p-1 shadow-2xl relative">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-white/5 bg-white/[0.02]">
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order ID</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Date</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Name</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Contact Number</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Email</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Location / Delivery</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap max-w-[180px]">Assets</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Add-ons</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Start date</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">End date</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Paid Amt</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap font-mono">Remaining Amt</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Discount Applied</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Status</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 text-center whitespace-nowrap">KYC Verification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan={15} className="text-center py-20 text-xs font-mono text-white/30">
-                        No customer orders stored in the orders collection.
-                      </td>
+          const renderEditableTextCell = (field: string, defaultValue: string, order: any) => {
+            if (isEditing(field, order.id)) {
+              return (
+                <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[120px]">
+                  <input
+                    type="text"
+                    value={tempValue}
+                    onChange={(e) => setTempValue(e.target.value)}
+                    onBlur={() => handleInlineSave(order.id, field, tempValue)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleInlineSave(order.id, field, tempValue);
+                      } else if (e.key === "Escape") {
+                        setEditingCell(null);
+                      }
+                    }}
+                    className="bg-black text-xs font-mono text-white border border-afterhours-cyan/60 rounded px-2 py-1 w-full focus:outline-none"
+                    autoFocus
+                  />
+                </td>
+              );
+            }
+            return (
+              <td
+                onClick={() => {
+                  setEditingCell({ orderId: order.id, field });
+                  setTempValue(order[field] || defaultValue);
+                }}
+                className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-all font-mono text-xs text-white/70 whitespace-nowrap min-w-[120px]"
+                title="Click to edit value"
+              >
+                {order[field] !== undefined && order[field] !== "" ? (
+                  <span className="hover:text-afterhours-cyan transition-colors">{order[field]}</span>
+                ) : (
+                  <span className="text-white/20 italic tracking-wide group-hover:text-white/40">Click to edit</span>
+                )}
+              </td>
+            );
+          };
+
+          return (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-afterhours-cyan/10 border border-afterhours-cyan/25 p-2.5 rounded-xl text-afterhours-cyan">
+                    <ShoppingBag size={18} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black uppercase italic text-white">Excel-Style Order Matrix</h2>
+                    <p className="text-[10px] uppercase tracking-wider text-white/40 font-mono">Live customer orders synced with Cloud Firestore</p>
+                  </div>
+                </div>
+                <div className="text-[10px] font-mono text-white/45 bg-[#121215] border border-white/5 rounded-full px-3 py-1.5 self-start sm:self-auto uppercase tracking-wider">
+                  Total Orders: <strong className="text-afterhours-cyan font-bold">{orders.length}</strong>
+                </div>
+              </div>
+
+              {/* CSV Import/Export tools panel */}
+              <div className="flex flex-wrap items-center gap-3 bg-[#121215]/50 border border-white/5 p-3 rounded-2xl">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 font-mono ml-1">Tools Panel:</span>
+                <button
+                  onClick={() => document.getElementById("csv-import-input")?.click()}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-cyan/10 text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black border border-afterhours-cyan/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Upload legacy orders CSV file"
+                >
+                  <Plus size={12} />
+                  Import Legacy CSV
+                </button>
+                <input
+                  type="file"
+                  id="csv-import-input"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleImportCSV}
+                />
+                <button
+                  onClick={handleExportCSV}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                  title="Download all orders in clean CSV"
+                >
+                  <FileText size={12} />
+                  Download CSV
+                </button>
+              </div>
+
+              <div className="w-full overflow-x-auto bg-[#0a0a0c]/80 border border-white/5 rounded-3xl p-1 shadow-2xl relative">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-white/[0.02]">
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Id</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Date</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Client Name</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Phone Num</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Start Date</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">End Date</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Type</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Item Rented</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Add-Ons</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Location Link</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 text-center whitespace-nowrap">KYC Doc</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Rent Amount</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Extra Charges</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Additional Dis</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Total Revenue</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Security Dep.</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Token Paid</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">To Collect</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Pay Status</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Status</th>
+                      <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Managed By</th>
                     </tr>
-                  ) : (
-                    orders.map((order) => (
-                      <tr key={order.id} className="hover:bg-white/[0.02] transition-all border-b border-white/5">
-                        {/* Order ID */}
-                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-cyan whitespace-nowrap">
-                          {order["Order ID"] || order.id}
-                        </td>
-                        {/* Order Date */}
-                        <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap">
-                          {order["Order Date"] ? new Date(order["Order Date"]).toLocaleString() : "N/A"}
-                        </td>
-                        {/* Name */}
-                        <td className="px-4 py-4 text-xs font-black text-white uppercase whitespace-nowrap">
-                          {order["Name"] || "Anonymous"}
-                        </td>
-                        {/* Contact Number */}
-                        <td className="px-4 py-4 text-[11px] font-mono text-white/80 whitespace-nowrap">
-                          {order["Contact number"] || "N/A"}
-                        </td>
-                        {/* Email */}
-                        <td className="px-4 py-4 text-[11px] font-mono text-white/50 truncate max-w-[120px] whitespace-nowrap" title={order["Email id"]}>
-                          {order["Email id"] || "N/A"}
-                        </td>
-                        {/* Location / Delivery */}
-                        <td className="px-4 py-4 text-xs whitespace-nowrap">
-                          {(() => {
-                            const rawLoc = order.location || order.locationLink || order.address;
-                            if (!rawLoc) return <span className="text-white/30 italic font-mono text-[10px]">N/A</span>;
-                            
-                            // Check if Google Maps link or dynamic link
-                            const isUrl = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(rawLoc.trim()) || 
-                                          rawLoc.trim().includes("maps.google") || 
-                                          rawLoc.trim().includes("maps.app.goo.gl");
-                            if (isUrl) {
-                              const fullUrl = rawLoc.trim().startsWith("http") ? rawLoc.trim() : `https://${rawLoc.trim()}`;
-                              return (
-                                <a
-                                  href={fullUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-afterhours-cyan hover:text-white hover:underline font-bold transition-all text-[11px] uppercase tracking-wider"
-                                >
-                                  📍 View Map ➔
-                                </a>
-                              );
-                            }
-                            return (
-                              <span className="text-white/70 max-w-[150px] truncate block text-[11px]" title={rawLoc}>
-                                {rawLoc}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        {/* Assets */}
-                        <td className="px-4 py-4 text-[11px] text-white/70 max-w-[200px] leading-relaxed whitespace-pre-wrap">
-                          {order["Assets"] || "N/A"}
-                        </td>
-                        {/* Add-ons */}
-                        <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap uppercase tracking-wider">
-                          {order["Addon"] || "N/A"}
-                        </td>
-                        {/* Start Date */}
-                        <td className="px-4 py-4 text-[10px] font-mono text-afterhours-cyan/80 whitespace-nowrap">
-                          {order["Start date"] || "N/A"}
-                        </td>
-                        {/* End Date */}
-                        <td className="px-4 py-4 text-[10px] font-mono text-afterhours-pink/80 whitespace-nowrap">
-                          {order["End date"] || "N/A"}
-                        </td>
-                        {/* Paid Amt */}
-                        <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-green whitespace-nowrap">
-                          {order["Paid amt"] || "N/A"}
-                        </td>
-                        {/* Remaining Amt */}
-                        <td className="px-4 py-4 text-[11px] font-mono text-white/80 whitespace-nowrap">
-                          {order["Remaining amt"] || "N/A"}
-                        </td>
-                        {/* Discount Applied */}
-                        <td className="px-4 py-4 text-[11px] font-mono text-white/40 whitespace-nowrap">
-                          {order["Discount applied"] || "N/A"}
-                        </td>
-                        {/* Status dropdown */}
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <select
-                            value={order.Status || "Pending"}
-                            onChange={(e) => handleOrderStatusUpdate(order.id, e.target.value)}
-                            disabled={updatingOrderStatusId === order.id}
-                            className={`bg-black text-[10px] font-black uppercase tracking-widest border rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-afterhours-purple transition-all cursor-pointer ${
-                              (order.Status || "Pending") === "Pending" ? "border-yellow-500/20 text-yellow-500" :
-                              (order.Status || "Pending") === "Active" ? "border-green-500/20 text-afterhours-green" :
-                              "border-gray-500/25 text-white/50"
-                            }`}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Active">Active</option>
-                            <option value="Completed">Completed</option>
-                          </select>
-                        </td>
-                        {/* View KYC button */}
-                        <td className="px-4 py-4 text-center whitespace-nowrap">
-                          {order["KYC Document URL"] ? (
-                            <button
-                              onClick={() => setKycModalUrl(order["KYC Document URL"])}
-                              className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 hover:border-afterhours-purple/80 rounded-lg transition-all cursor-pointer flex items-center gap-1 mx-auto"
-                            >
-                              <Eye size={10} />
-                              <span>View KYC</span>
-                            </button>
-                          ) : (
-                            <span className="text-[9px] font-bold text-white/20 italic uppercase tracking-wider block">No Document</span>
-                          )}
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td colSpan={21} className="text-center py-20 text-xs font-mono text-white/30">
+                          No customer orders stored in the orders collection.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      orders.map((order) => (
+                        <tr key={order.id} className="hover:bg-white/[0.02] transition-all border-b border-white/5">
+                          {/* 1. Order Id */}
+                          <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-cyan whitespace-nowrap">
+                            {order["Order ID"] || order.id}
+                          </td>
+
+                          {/* 2. Date */}
+                          <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap">
+                            {order["Order Date"] ? new Date(order["Order Date"]).toLocaleDateString() : "N/A"}
+                          </td>
+
+                          {/* 3. Client Name */}
+                          <td className="px-4 py-4 text-xs font-black text-white uppercase whitespace-nowrap">
+                            {order["Name"] || "Anonymous"}
+                          </td>
+
+                          {/* 4. Phone Num */}
+                          <td className="px-4 py-4 text-[11px] font-mono text-white/80 whitespace-nowrap">
+                            {order["Contact number"] || "N/A"}
+                          </td>
+
+                          {/* 5. Start Date */}
+                          <td className="px-4 py-4 text-[10px] font-mono text-afterhours-cyan/80 whitespace-nowrap">
+                            {order["Start date"] || "N/A"}
+                          </td>
+
+                          {/* 6. End Date */}
+                          <td className="px-4 py-4 text-[10px] font-mono text-afterhours-pink/80 whitespace-nowrap">
+                            {order["End date"] || "N/A"}
+                          </td>
+
+                          {/* 7. Order Type */}
+                          {renderEditableTextCell("Order Type", "Online", order)}
+
+                          {/* 8. Item Rented */}
+                          <td className="px-4 py-4 text-[11px] text-white/70 max-w-[200px] leading-relaxed whitespace-pre-wrap">
+                            {order["Assets"] || "N/A"}
+                          </td>
+
+                          {/* 9. Add-Ons */}
+                          <td className="px-4 py-4 text-[10px] font-mono text-white/50 whitespace-nowrap uppercase tracking-wider">
+                            {order["Addon"] || "N/A"}
+                          </td>
+
+                          {/* 10. Location Link */}
+                          <td className="px-4 py-4 text-xs whitespace-nowrap">
+                            {(() => {
+                              const rawLoc = order.location || order.locationLink || order.address;
+                              if (!rawLoc) return <span className="text-white/30 italic font-mono text-[10px]">N/A</span>;
+                              
+                              const isUrl = /^(https?:\/\/|www\.)[^\s/$.?#].[^\s]*$/i.test(rawLoc.trim()) || 
+                                            rawLoc.trim().includes("maps.google") || 
+                                            rawLoc.trim().includes("maps.app.goo.gl");
+                              if (isUrl) {
+                                const fullUrl = rawLoc.trim().startsWith("http") ? rawLoc.trim() : `https://${rawLoc.trim()}`;
+                                return (
+                                  <a
+                                    href={fullUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-afterhours-cyan hover:text-white hover:underline font-bold transition-all text-[11px] uppercase tracking-wider"
+                                  >
+                                    📍 View Map ➔
+                                  </a>
+                                );
+                              }
+                              return (
+                                <span className="text-white/70 max-w-[150px] truncate block text-[11px]" title={rawLoc}>
+                                  {rawLoc}
+                                </span>
+                              );
+                            })()}
+                          </td>
+
+                          {/* 11. KYC Doc */}
+                          <td className="px-4 py-4 text-center whitespace-nowrap">
+                            {order["KYC Document URL"] ? (
+                              <button
+                                onClick={() => setKycModalUrl(order["KYC Document URL"])}
+                                className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-afterhours-purple/10 text-afterhours-purple hover:bg-afterhours-purple hover:text-white border border-afterhours-purple/20 hover:border-afterhours-purple/80 rounded-lg transition-all cursor-pointer flex items-center gap-1 mx-auto"
+                              >
+                                <Eye size={10} />
+                                <span>View KYC</span>
+                              </button>
+                            ) : (
+                              <span className="text-[9px] font-bold text-white/20 italic uppercase tracking-wider block">No Document</span>
+                            )}
+                          </td>
+
+                          {/* 12. Rent Amount */}
+                          {renderEditableTextCell("Rent Amount", "", order)}
+
+                          {/* 13. Extra Charges */}
+                          {renderEditableTextCell("Extra Charges", "", order)}
+
+                          {/* 14. Additional Dis */}
+                          {renderEditableTextCell("Additional Dis", "", order)}
+
+                          {/* 15. Total Revenue */}
+                          {renderEditableTextCell("Total Revenue", "", order)}
+
+                          {/* 16. Security Dep. */}
+                          {renderEditableTextCell("Security Dep.", "", order)}
+
+                          {/* 17. Token Paid */}
+                          <td className="px-4 py-4 text-[11px] font-mono font-bold text-afterhours-green whitespace-nowrap">
+                            {order["Paid amt"] || "N/A"}
+                          </td>
+
+                          {/* 18. To Collect (Remaining amt) - Inline Editable */}
+                          {renderEditableTextCell("Remaining amt", "₹0", order)}
+
+                          {/* 19. Pay Status - Inline Editable Select dropdown */}
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {isEditing("Pay Status", order.id) ? (
+                              <select
+                                value={tempValue}
+                                onChange={(e) => {
+                                  setTempValue(e.target.value);
+                                  handleInlineSave(order.id, "Pay Status", e.target.value);
+                                }}
+                                onBlur={() => setEditingCell(null)}
+                                className="bg-black text-[10px] font-black uppercase tracking-wider border border-afterhours-cyan/60 rounded px-2 py-1 focus:outline-none text-white cursor-pointer"
+                                autoFocus
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Partially Paid">Partially Paid</option>
+                                <option value="Fully Paid">Fully Paid</option>
+                                <option value="Refunded">Refunded</option>
+                              </select>
+                            ) : (
+                              <span
+                                onClick={() => {
+                                  setEditingCell({ orderId: order.id, field: "Pay Status" });
+                                  setTempValue(order["Pay Status"] || "Pending");
+                                }}
+                                className={`cursor-pointer hover:text-afterhours-cyan transition-colors text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border whitespace-nowrap ${
+                                  (order["Pay Status"] || "Pending").toLowerCase() === "fully paid" || (order["Pay Status"] || "Pending").toLowerCase() === "paid" ? "border-green-500/20 text-afterhours-green bg-green-500/5" :
+                                  (order["Pay Status"] || "Pending").toLowerCase() === "partially paid" ? "border-cyan-500/20 text-afterhours-cyan bg-afterhours-cyan/5" :
+                                  "border-yellow-500/20 text-yellow-500 bg-yellow-500/5"
+                                }`}
+                              >
+                                {order["Pay Status"] || "Pending"}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 20. Order Status - Inline Editable Select dropdown */}
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {isEditing("Status", order.id) ? (
+                              <select
+                                value={tempValue}
+                                onChange={(e) => {
+                                  setTempValue(e.target.value);
+                                  handleInlineSave(order.id, "Status", e.target.value);
+                                }}
+                                onBlur={() => setEditingCell(null)}
+                                className="bg-black text-[10px] font-black uppercase tracking-wider border border-afterhours-cyan/60 rounded px-2 py-1 focus:outline-none text-white cursor-pointer"
+                                autoFocus
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                              </select>
+                            ) : (
+                              <span
+                                onClick={() => {
+                                  setEditingCell({ orderId: order.id, field: "Status" });
+                                  setTempValue(order.Status || "Pending");
+                                }}
+                                className={`cursor-pointer hover:text-afterhours-cyan transition-colors text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded border whitespace-nowrap ${
+                                  (order.Status || "Pending") === "Pending" ? "border-yellow-500/20 text-yellow-500 bg-yellow-500/5" :
+                                  (order.Status || "Pending") === "Active" ? "border-green-500/20 text-afterhours-green bg-green-500/5" :
+                                  (order.Status || "Pending") === "Completed" ? "border-white/5 text-white/50 bg-white/5" :
+                                  "border-red-500/25 text-red-500 bg-red-500/5"
+                                }`}
+                              >
+                                {order.Status || "Pending"}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* 21. Managed By */}
+                          {renderEditableTextCell("Managed By", "", order)}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 2: DEMAND INTELLIGENCE HUB */}
         {activeTab === "waitlist" && (
@@ -1220,6 +1889,262 @@ export function AdminDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 4: VISUAL AVAILABILITY CALENDAR */}
+        {activeTab === "calendar" && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-afterhours-green/10 border border-afterhours-green/25 p-2.5 rounded-xl text-afterhours-green">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase italic text-white font-mono tracking-tight">Visual Availability Calendar</h2>
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
+                    {calendarMode === "gears" ? "Real-time status tracking for high-ticket inventory units" : "Aggregate rented vs available counts for rental addons"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Header Segmented Toggle & Config Control */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Mode Toggle Button Set */}
+                <div className="flex p-1 bg-black/60 rounded-xl border border-white/5 font-mono">
+                  <button
+                    onClick={() => setCalendarMode("gears")}
+                    className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                      calendarMode === "gears"
+                        ? "bg-gradient-to-r from-afterhours-cyan to-afterhours-purple text-black"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Gears
+                  </button>
+                  <button
+                    onClick={() => setCalendarMode("addons")}
+                    className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                      calendarMode === "addons"
+                        ? "bg-gradient-to-r from-afterhours-cyan to-afterhours-purple text-black"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    Add-ons
+                  </button>
+                </div>
+
+
+
+                {/* Asset Dropdown Selector - only visible in 'gears' view */}
+                {calendarMode === "gears" && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest font-mono">Select Unit:</label>
+                    <select
+                      value={selectedAssetUnit}
+                      onChange={(e) => setSelectedAssetUnit(e.target.value)}
+                      className="bg-black/80 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-afterhours-green focus:border-afterhours-green focus:outline-none cursor-pointer uppercase tracking-wider"
+                    >
+                      {allGearUnitsList.length === 0 ? (
+                        <option value="">No units created</option>
+                      ) : (
+                        allGearUnitsList.map(unit => (
+                          <option key={unit.id} value={unit.name}>{unit.name} ({unit.categoryName})</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                )}
+
+                {/* Add-on Dropdown Selector - only visible in 'addons' view */}
+                {calendarMode === "addons" && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest font-mono">Select Add-on:</label>
+                    <select
+                      value={selectedCalendarAddonId}
+                      onChange={(e) => setSelectedCalendarAddonId(e.target.value)}
+                      className="bg-black/80 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-afterhours-purple focus:border-afterhours-purple focus:outline-none cursor-pointer uppercase tracking-wider"
+                    >
+                      {categoriesList.filter(c => c.type === "addon").length === 0 ? (
+                        <option value="">No Add-ons created</option>
+                      ) : (
+                        categoriesList
+                          .filter(c => c.type === "addon")
+                          .map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Calendar Control Frame */}
+            <div className="p-6 rounded-3xl bg-[#0a0a0c]/80 border border-white/5 shadow-2xl space-y-6">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => {
+                    if (currentMonth === 0) {
+                      setCurrentMonth(11);
+                      setCurrentYear(prev => prev - 1);
+                    } else {
+                      setCurrentMonth(prev => prev - 1);
+                    }
+                  }}
+                  className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-white/80 cursor-pointer"
+                >
+                  ◀ Previous
+                </button>
+                <h3 className="text-sm font-black uppercase tracking-widest text-afterhours-cyan font-mono">
+                  {new Date(currentYear, currentMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </h3>
+                <button
+                  onClick={() => {
+                    if (currentMonth === 11) {
+                      setCurrentMonth(0);
+                      setCurrentYear(prev => prev + 1);
+                    } else {
+                      setCurrentMonth(prev => prev + 1);
+                    }
+                  }}
+                  className="px-4 py-2 text-xs font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-all text-white/80 cursor-pointer"
+                >
+                  Next ▶
+                </button>
+              </div>
+
+              {/* 7 Days of the Week Header */}
+              <div className="grid grid-cols-7 gap-2 text-center">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(dayName => (
+                  <div key={dayName} className="text-[10px] font-black uppercase tracking-widest text-white/30 font-mono py-1">
+                    {dayName}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {daysInMonth.map((day, idx) => {
+                  if (!day) {
+                    return (
+                      <div
+                        key={`empty-${idx}`}
+                        className="aspect-square min-h-[90px] rounded-2xl bg-[#121215]/10 border border-dashed border-white/[0.02]"
+                      />
+                    );
+                  }
+
+                  const matchedOrders = getOrdersForDayAndUnit(day, selectedAssetUnit);
+                  const isToday = new Date().toDateString() === day.toDateString();
+                  
+                  const addonStats = calendarMode === "addons" ? getSelectedAddonStatsForDay(day, selectedCalendarAddonId) : null;
+                  const isBooked = calendarMode === "addons"
+                    ? (addonStats ? addonStats.booked > 0 : false)
+                    : matchedOrders.length > 0;
+
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`min-h-[110px] p-2.5 rounded-2xl border transition-all flex flex-col justify-between max-w-full overflow-hidden ${
+                        isToday 
+                          ? "bg-afterhours-cyan/5 border-afterhours-cyan/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]" 
+                          : isBooked 
+                            ? "bg-afterhours-purple/10 border-afterhours-purple/30" 
+                            : "bg-[#121215]/40 border-white/5 hover:border-white/10"
+                      }`}
+                    >
+                      {/* Day Number */}
+                      <span className={`text-[10px] font-bold font-mono ${isToday ? "text-afterhours-cyan font-black" : "text-white/40"}`}>
+                        {day.getDate()}
+                      </span>
+
+                      {/* Dynamic Mode Render Block */}
+                      {calendarMode === "addons" ? (
+                        <div className="space-y-1 mt-1.5 flex-grow overflow-y-auto max-h-[85px] no-scrollbar">
+                          {selectedCalendarAddonId ? (() => {
+                            const cat = categoriesList.find(c => c.id === selectedCalendarAddonId);
+                            const stats = getSelectedAddonStatsForDay(day, selectedCalendarAddonId);
+                            if (stats.owned === 0) {
+                              return (
+                                <p className="text-[8px] text-white/20 italic font-mono uppercase text-center mt-4">
+                                  No units
+                                </p>
+                              );
+                            }
+                            return (
+                              <div className="space-y-1">
+                                <div
+                                  className={`p-1 px-1.5 rounded-lg text-white leading-tight font-mono text-[9px] ${
+                                    stats.booked > 0 
+                                      ? "bg-afterhours-purple/20 border border-afterhours-purple/30" 
+                                      : "bg-white/5 border border-white/10 text-white/50"
+                                  }`}
+                                  title={`${cat?.name || "Addon"}: ${stats.booked} booked, ${stats.available} available from ${stats.owned}`}
+                                >
+                                  <span className="font-sans font-bold text-[9px] block truncate text-white">
+                                    {cat?.name || "Addon"}
+                                  </span>
+                                  <div className="flex justify-between items-center text-[8px] mt-0.5 font-mono">
+                                    <span className="text-white/40">Booked:</span>
+                                    <span>
+                                      <span className={stats.booked > 0 ? "text-afterhours-purple font-black" : "text-white/40"}>
+                                        {stats.booked}
+                                      </span>
+                                      <span className="text-white/20 mx-[2px]">/</span>
+                                      <span className="text-white/60">{stats.owned}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="space-y-0.5">
+                                  {stats.unitStats.map(u => (
+                                    <div 
+                                      key={u.unitId} 
+                                      className={`text-[8px] px-1 py-0.5 rounded flex justify-between items-center font-mono ${
+                                        u.booked 
+                                          ? "bg-red-500/10 text-red-400 border border-red-500/15" 
+                                          : "bg-green-500/5 text-afterhours-green border border-green-500/10"
+                                      }`}
+                                    >
+                                      <span className="truncate max-w-[55px]">{u.unitName}</span>
+                                      <span className="text-[6px] uppercase font-bold tracking-tight">
+                                        {u.booked ? "Rented" : "Idle"}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })() : (
+                            <p className="text-[8px] text-white/20 italic font-mono uppercase text-center mt-4">
+                              Select from dropdown
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        /* Default Gears Unit Rented list */
+                        <div className="space-y-1.5 mt-2 flex-grow overflow-y-auto max-h-[80px] no-scrollbar">
+                          {matchedOrders.map(order => (
+                            <div
+                              key={order.id}
+                              className="p-1 px-1.5 rounded-lg bg-afterhours-purple/20 border border-afterhours-purple/30 text-white leading-tight"
+                              title={`Order: ${order["Order ID"] || order.id} \nClient: ${order["Name"] || "Anonymous"}`}
+                            >
+                              <p className="text-[9px] font-black uppercase tracking-wider text-afterhours-cyan truncate">
+                                {order["Name"] || "Anonymous"}
+                              </p>
+                              <p className="text-[8px] font-mono text-white/50 truncate">
+                                #{order["Order ID"] || order.id}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1624,20 +2549,37 @@ export function AdminDashboard() {
                       type="file"
                       accept="image/*"
                       onChange={handleAssetFileChange}
+                      multiple
                       className="hidden"
                     />
 
-                    {assetPhotoPreview ? (
-                      <div className="w-full relative" onClick={(e) => e.stopPropagation()}>
-                        <img
-                          src={assetPhotoPreview}
-                          alt="Asset Preview"
-                          className="max-h-60 w-full object-contain rounded-2xl border border-white/10 my-2"
-                        />
-                        <div className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white hover:text-afterhours-pink p-2 rounded-full border border-white/10 transition-colors shadow-lg">
-                          <button type="button" onClick={removeAssetPhoto}>
-                            <X size={16} />
-                          </button>
+                    {assetPhotoPreviews.length > 0 ? (
+                      <div className="w-full relative space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 my-2">
+                          {assetPhotoPreviews.map((preview, i) => (
+                            <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-white/10 group bg-black/60">
+                              <img
+                                src={preview}
+                                alt={`Asset Preview ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAssetPhotos(prev => prev.filter((_, idx) => idx !== i));
+                                    setAssetPhotoPreviews(prev => prev.filter((_, idx) => idx !== i));
+                                  }}
+                                  className="bg-black/85 hover:bg-black text-rose-500 p-1.5 rounded-full border border-white/10 transition-colors shadow-lg"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-[10px] font-mono text-white/40 flex items-center justify-center gap-1">
+                          <Plus size={10} /> Click outer box to add more files
                         </div>
                       </div>
                     ) : (
@@ -1645,7 +2587,7 @@ export function AdminDashboard() {
                         <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto text-white/40">
                           <ImageIcon size={20} />
                         </div>
-                        <p className="text-xs text-white/85 font-mono">Drag asset photo here or <span className="text-afterhours-cyan font-bold">browse</span></p>
+                        <p className="text-xs text-white/85 font-mono">Drag asset photo(s) here or <span className="text-afterhours-cyan font-bold">browse</span></p>
                       </div>
                     )}
                   </div>
@@ -2251,6 +3193,277 @@ export function AdminDashboard() {
           </div>
         )}
 
+        {/* TAB 4: DECOUPLED INVENTORY MASTER VAULT */}
+        {activeTab === "vault" && (
+          <div className="space-y-12 animate-fadeIn">
+            {/* Header / Intro */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-afterhours-cyan/10 border border-afterhours-cyan/25 p-2.5 rounded-xl text-afterhours-cyan">
+                  <Sliders size={18} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase italic text-white font-mono tracking-tight">Decoupled Inventory Master Vault</h2>
+                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
+                    Manage Master Categories and individual sub-units dynamically.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleBootstrapVault}
+                className="px-4 py-2 bg-gradient-to-r from-afterhours-cyan to-afterhours-purple text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+              >
+                ⚡ Seed Default Vault Preset
+              </button>
+            </div>
+
+            {/* Quick Category Form */}
+            <div className="bg-gradient-to-r from-neutral-900 via-[#121215] to-[#0a0a0c] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 h-40 w-40 bg-afterhours-cyan/5 blur-3xl rounded-full pointer-events-none" />
+              <h3 className="text-xs uppercase font-black tracking-widest text-[#90e0d0] font-mono mb-4">
+                Step 1: Create Master Product Category
+              </h3>
+              
+              <form onSubmit={handleCreateCategory} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div className="md:col-span-5">
+                  <label className="text-[8px] font-bold text-white/40 uppercase tracking-widest font-mono block mb-1.5">
+                    Category Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    placeholder="e.g., PS5 Console, Wireless Mic, Projector Screen"
+                    className="w-full bg-[#121215]/80 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-white placeholder-white/20 focus:border-afterhours-cyan focus:outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-4">
+                  <label className="text-[8px] font-bold text-white/40 uppercase tracking-widest font-mono block mb-1.5">
+                    Inventory Stream
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 bg-[#121215]/80 p-1.5 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setNewCatType("gear")}
+                      className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                        newCatType === "gear"
+                          ? "bg-afterhours-cyan text-black"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      Base Gear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewCatType("addon")}
+                      className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                        newCatType === "addon"
+                          ? "bg-afterhours-purple text-white"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      Modular Add-on
+                    </button>
+                  </div>
+                </div>
+
+                <div className="md:col-span-3">
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-white text-black text-[10px] font-black uppercase tracking-[0.1em] rounded-xl hover:bg-afterhours-cyan hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer font-bold"
+                  >
+                    + Register Category
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Step 2: Main categories and units management */}
+            <div className="space-y-8">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <h3 className="text-xs uppercase font-black tracking-widest text-white/50 font-mono">
+                  Step 2: Define Custom Stock Sub-units / Serial SKUs ({categoriesList.length} Categories Registered)
+                </h3>
+              </div>
+
+              {categoriesList.length === 0 ? (
+                <div className="text-center py-16 bg-[#121215]/40 rounded-3xl border border-dashed border-white/5">
+                  <p className="text-xs text-white/30 font-mono uppercase tracking-wider">
+                    The Master inventory vault is empty. Click "Seed Default Vault Preset" to fill your assets instantly!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Gears Section */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#90e0d0] font-mono flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-afterhours-cyan" />
+                      Gears Stock Stream
+                    </h4>
+
+                    <div className="space-y-4">
+                      {categoriesList.filter(c => c.type === "gear").map(cat => {
+                        const unitsSnapshot = unitsMap[cat.id] || [];
+                        return (
+                          <div key={cat.id} className="bg-neutral-950/60 border border-white/5 p-5 rounded-2xl relative space-y-4 hover:border-white/10 transition-all">
+                            {/* Category Header */}
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <span className="text-xs font-black uppercase tracking-wider text-white">
+                                  {cat.name}
+                                </span>
+                                <span className="block text-[8px] font-mono text-afterhours-cyan uppercase font-bold tracking-tight">
+                                  Base Asset • {unitsSnapshot.length} Units in Vault
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                className="p-1.5 rounded-lg bg-red-950/10 border border-red-500/10 text-red-400 hover:bg-red-950/20 hover:border-red-500/40 transition-all cursor-pointer"
+                                title="Delete Category"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+
+                            {/* Units Pill Grid */}
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {unitsSnapshot.length === 0 ? (
+                                <span className="text-[9px] text-white/20 italic uppercase font-mono tracking-wider py-1 pl-1">
+                                  No Stock Units registered
+                                </span>
+                              ) : (
+                                unitsSnapshot.map(unit => (
+                                  <div
+                                    key={unit.id}
+                                    className="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-[10px] font-mono font-bold text-white/80"
+                                  >
+                                    <span>{unit.name}</span>
+                                    <button
+                                      onClick={() => handleDeleteUnit(cat.id, unit.id)}
+                                      className="text-white/30 hover:text-red-400 transition-colors"
+                                    >
+                                      &times;
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            {/* Inline Creator Input */}
+                            <div className="flex gap-2 border-t border-white/5 pt-4">
+                              <input
+                                type="text"
+                                placeholder="e.g. Unit A, Serial #12"
+                                value={newUnitNames[cat.id] || ""}
+                                onChange={(e) => setNewUnitNames(prev => ({ ...prev, [cat.id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleAddUnitToCategory(cat.id);
+                                  }
+                                }}
+                                className="flex-grow bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 font-mono font-bold"
+                              />
+                              <button
+                                onClick={() => handleAddUnitToCategory(cat.id)}
+                                className="px-3 py-1.5 bg-afterhours-cyan text-black font-black uppercase text-[9px] rounded-xl tracking-wider cursor-pointer"
+                              >
+                                + Add Unit
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Addons Section */}
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[#a855f7] font-mono flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-afterhours-purple animate-pulse" />
+                      Add-ons Material Stream
+                    </h4>
+
+                    <div className="space-y-4">
+                      {categoriesList.filter(c => c.type === "addon").map(cat => {
+                        const unitsSnapshot = unitsMap[cat.id] || [];
+                        return (
+                          <div key={cat.id} className="bg-neutral-950/60 border border-white/5 p-5 rounded-2xl relative space-y-4 hover:border-white/10 transition-all">
+                            {/* Category Header */}
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <span className="text-xs font-black uppercase tracking-wider text-white">
+                                  {cat.name}
+                                </span>
+                                <span className="block text-[8px] font-mono text-[#a855f7] uppercase font-bold tracking-tight">
+                                  Modular Accessory • {unitsSnapshot.length} Units in Stock
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                className="p-1.5 rounded-lg bg-red-950/10 border border-red-500/10 text-red-400 hover:bg-red-950/20 hover:border-red-500/40 transition-all cursor-pointer"
+                                title="Delete Category"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+
+                            {/* Units Pill Grid */}
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {unitsSnapshot.length === 0 ? (
+                                <span className="text-[9px] text-white/20 italic uppercase font-mono tracking-wider py-1 pl-1">
+                                  No Modular Units in Stock
+                                </span>
+                              ) : (
+                                unitsSnapshot.map(unit => (
+                                  <div
+                                    key={unit.id}
+                                    className="px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2 text-[10px] font-mono font-bold text-white/80"
+                                  >
+                                    <span>{unit.name}</span>
+                                    <button
+                                      onClick={() => handleDeleteUnit(cat.id, unit.id)}
+                                      className="text-white/30 hover:text-red-400 transition-colors"
+                                    >
+                                      &times;
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            {/* Inline Creator Input */}
+                            <div className="flex gap-2 border-t border-white/5 pt-4">
+                              <input
+                                type="text"
+                                placeholder="e.g. Unit 1, Serial #34"
+                                value={newUnitNames[cat.id] || ""}
+                                onChange={(e) => setNewUnitNames(prev => ({ ...prev, [cat.id]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleAddUnitToCategory(cat.id);
+                                  }
+                                }}
+                                className="flex-grow bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 font-mono font-bold"
+                              />
+                              <button
+                                onClick={() => handleAddUnitToCategory(cat.id)}
+                                className="px-3 py-1.5 bg-afterhours-purple text-white font-black uppercase text-[9px] rounded-xl tracking-wider cursor-pointer font-bold"
+                              >
+                                + Add Stock
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* KYC Lightbox Modal */}
@@ -2312,6 +3525,8 @@ export function AdminDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+
+
 
     </div>
   );

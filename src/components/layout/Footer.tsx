@@ -8,7 +8,7 @@ export function Footer() {
   return (
     <footer className="bg-afterhours-black border-t border-white/10 pt-20 pb-10 px-6 overflow-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-12 mb-20">
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex items-center gap-4 mb-6 group">
@@ -63,6 +63,19 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Legal & Platform Column */}
+          <div>
+            <h4 className="text-xs uppercase tracking-[0.3em] text-white/40 font-bold mb-8">Legal & Platform</h4>
+            <ul className="space-y-4">
+              <li>
+                <Link to="/terms" className="text-white/60 hover:text-afterhours-cyan transition-colors uppercase text-sm tracking-widest font-medium">Terms & Conditions</Link>
+              </li>
+              <li>
+                <Link to="/admin" className="text-white/60 hover:text-afterhours-purple transition-colors uppercase text-sm tracking-widest font-medium">Admin Portal</Link>
+              </li>
+            </ul>
+          </div>
+
           {/* Contact Column */}
           <div>
             <h4 className="text-xs uppercase tracking-[0.3em] text-white/40 font-bold mb-8">Contact Us</h4>
@@ -95,13 +108,6 @@ export function Footer() {
             <p className="text-[10px] uppercase tracking-[0.4em] text-white/60 font-black italic">
               DESIGNED FOR THE ELITE.
             </p>
-            <Link 
-              to="/admin" 
-              className="text-[10.5px] font-bold text-white/10 hover:text-afterhours-purple transition-all duration-300 ml-2 hover:scale-105 select-none font-mono"
-              title="Operator Portal"
-            >
-              (AH)
-            </Link>
           </div>
         </div>
       </div>
