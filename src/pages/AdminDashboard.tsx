@@ -376,16 +376,31 @@ export function AdminDashboard() {
   // Fetch orders in real-time
   useEffect(() => {
     const ordersRef = collection(db, "orders");
+
+    const extractOrderIdNumber = (idStr: string): number => {
+      if (!idStr) return 0;
+      const matches = idStr.match(/\d+/g);
+      if (matches && matches.length > 0) {
+        return parseInt(matches[matches.length - 1], 10);
+      }
+      return 0;
+    };
+
     const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
       const list: any[] = [];
       snapshot.forEach((doc) => {
         list.push({ id: doc.id, ...doc.data() });
       });
-      // Sort: latest orders first
+      // Sort strictly by Order ID number in descending order
       list.sort((a, b) => {
-        const dateA = a["Order Date"] ? new Date(a["Order Date"]).getTime() : 0;
-        const dateB = b["Order Date"] ? new Date(b["Order Date"]).getTime() : 0;
-        return dateB - dateA;
+        const idA = String(a["Order ID"] || a.id || "");
+        const idB = String(b["Order ID"] || b.id || "");
+        const numA = extractOrderIdNumber(idA);
+        const numB = extractOrderIdNumber(idB);
+        if (numA !== numB) {
+          return numB - numA;
+        }
+        return idB.localeCompare(idA);
       });
       setOrders(list);
     }, (err) => {
@@ -630,7 +645,22 @@ export function AdminDashboard() {
 
   const handleCreateManualOrder = async () => {
     try {
-      const manualId = `MH-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+      const querySnapshot = await getDocs(collection(db, "orders"));
+      let maxNum = 1000;
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const orderIdStr = String(data["Order ID"] || data.id || "");
+        const matches = orderIdStr.match(/\d+/g);
+        if (matches && matches.length > 0) {
+          const num = parseInt(matches[matches.length - 1], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+      const nextNum = maxNum + 1;
+      const manualId = `Order-${nextNum}`;
+
       const payload = {
         "Order ID": manualId,
         "Order Date": new Date().toISOString(),
@@ -684,7 +714,8 @@ export function AdminDashboard() {
         const data = evt.target?.result as ArrayBuffer;
         if (!data) return;
 
-        const workbook = XLSX.read(data, { type: "array" });
+        const array = new Uint8Array(data);
+        const workbook = XLSX.read(array, { type: "array" });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonRows: any[] = XLSX.utils.sheet_to_json(worksheet);
@@ -1529,6 +1560,97 @@ export function AdminDashboard() {
           const renderEditableTextCell = (field: string, defaultValue: string, order: any, displayValue?: any) => {
             const currentVal = order[field] !== undefined ? order[field] : defaultValue;
             if (isEditing(field, order.id)) {
+              if (field === "Start date" || field === "End date") {
+                let dateValue = tempValue;
+                if (!dateValue || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                  try {
+                    const d = new Date(dateValue || Date.now());
+                    if (!isNaN(d.getTime())) {
+                      dateValue = d.toISOString().split('T')[0];
+                    } else {
+                      dateValue = new Date().toISOString().split('T')[0];
+                    }
+                  } catch (err) {
+                    dateValue = new Date().toISOString().split('T')[0];
+                  }
+                }
+                return (
+                  <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[150px]">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={dateValue}
+                        onChange={(e) => setTempValue(e.target.value)}
+                        onBlur={() => {
+                          handleInlineSave(order.id, field, tempValue || dateValue);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleInlineSave(order.id, field, tempValue || dateValue);
+                          } else if (e.key === "Escape") {
+                            setEditingCell(null);
+                          }
+                        }}
+                        className="bg-black text-[11px] font-mono text-white border border-afterhours-cyan/60 rounded px-2 py-1 focus:outline-none cursor-pointer"
+                        autoFocus
+                      />
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleInlineSave(order.id, field, tempValue || dateValue);
+                        }}
+                        className="p-1 px-1.5 bg-afterhours-green/25 hover:bg-afterhours-green text-afterhours-green hover:text-black rounded text-[10px] uppercase font-bold tracking-wide transition-all cursor-pointer flex items-center justify-center"
+                        title="Save Date"
+                      >
+                        ✔
+                      </button>
+                    </div>
+                  </td>
+                );
+              }
+
+              if (field === "KYC Document URL") {
+                return (
+                  <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[210px]">
+                    <div className="flex items-center gap-1.5 border border-dashed border-white/15 p-1.5 rounded-lg bg-black/60">
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            setEditingCell(null);
+                            const storagePath = `kyc/${order.id || Date.now()}_${file.name}`;
+                            const storageRef = ref(storage, storagePath);
+                            const uploadSnapshot = await uploadBytes(storageRef, file);
+                            const downloadUrl = await getDownloadURL(uploadSnapshot.ref);
+                            
+                            const orderRef = doc(db, "orders", order.id);
+                            await updateDoc(orderRef, {
+                              "KYC Document URL": downloadUrl
+                            });
+                            alert("KYC Document uploaded and saved successfully!");
+                          } catch (uploadErr: any) {
+                            console.error("KYC upload error:", uploadErr);
+                            alert("Failed to upload KYC document: " + uploadErr.message);
+                          }
+                        }}
+                        className="text-[9px] text-white/75 font-mono file:mr-1.5 file:py-1 file:px-2 file:rounded file:border-0 file:bg-afterhours-purple/20 file:text-afterhours-purple hover:file:bg-afterhours-purple hover:file:text-white file:text-[9px] file:cursor-pointer cursor-pointer"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => setEditingCell(null)}
+                        className="p-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded transition-all cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  </td>
+                );
+              }
+
               return (
                 <td className="px-4 py-4 whitespace-nowrap bg-white/[0.04] min-w-[120px]">
                   <input
