@@ -32,7 +32,7 @@ const RENTAL_ITEMS: RentalItem[] = [
   {
     id: "combo-theatre",
     name: "Gaming Theatre",
-    price: 1999,
+    price: 2099,
     desc: "Includes Sony PS5 Console + Full HD Projector.",
     category: "Combo",
     isFeatured: true,
@@ -59,7 +59,7 @@ const RENTAL_ITEMS: RentalItem[] = [
   {
     id: "hw-ps5",
     name: "Play Station 5 ( PS5 console)",
-    price: 1299,
+    price: 1499,
     desc: "Includes standard controllers",
     category: "Hardware",
     icon: <Gamepad2 className="w-full h-full" />
