@@ -112,6 +112,12 @@ export function AdminDashboard() {
   const [kycModalUrl, setKycModalUrl] = useState<string | null>(null);
   const [updatingOrderStatusId, setUpdatingOrderStatusId] = useState<string | null>(null);
 
+  // --- Extension Engine States (Booking Extension Modal) ---
+  const [extendingOrder, setExtendingOrder] = useState<any | null>(null);
+  const [extensionEndDate, setExtensionEndDate] = useState<string>("");
+  const [extensionRevenue, setExtensionRevenue] = useState<string>("0");
+  const [isSubmitExtending, setIsSubmitExtending] = useState<boolean>(false);
+
   // --- Operational Excel Upgrade / Inline Editor ---
   const [editingCell, setEditingCell] = useState<{ orderId: string; field: string } | null>(null);
   const [tempValue, setTempValue] = useState<string>("");
@@ -119,7 +125,7 @@ export function AdminDashboard() {
   // --- Visual Availability Calendar States ---
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
-  const [selectedAssetUnit, setSelectedAssetUnit] = useState<string>("");
+  const [selectedAssetUnit, setSelectedAssetUnit] = useState<string>("ALL_PS5s");
   const [calendarOrders, setCalendarOrders] = useState<any[]>([]);
   const [calendarMode, setCalendarMode] = useState<"gears" | "addons">("gears");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -183,10 +189,14 @@ export function AdminDashboard() {
   // Selected state for Visual Calendar filter dropdown
   const [selectedCalendarAddonId, setSelectedCalendarAddonId] = useState("");
 
-  // Auto-set first unit when allGearUnitsList becomes available or changes
+  // Auto-set first unit when allGearUnitsList becomes available or changes, respecting master categories starting with ALL_
   useEffect(() => {
-    if (allGearUnitsList.length > 0 && (!selectedAssetUnit || !allGearUnitsList.some(gu => gu.name === selectedAssetUnit))) {
-      setSelectedAssetUnit(allGearUnitsList[0].name);
+    if (allGearUnitsList.length > 0) {
+      if (!selectedAssetUnit) {
+        setSelectedAssetUnit("ALL_PS5s");
+      } else if (!selectedAssetUnit.startsWith("ALL_") && !allGearUnitsList.some(gu => gu.name === selectedAssetUnit)) {
+        setSelectedAssetUnit("ALL_PS5s");
+      }
     }
   }, [allGearUnitsList, selectedAssetUnit]);
 
@@ -198,7 +208,9 @@ export function AdminDashboard() {
     }
 
     const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, where("assignedUnits", "array-contains", selectedAssetUnit));
+    const q = selectedAssetUnit.startsWith("ALL_")
+      ? query(ordersRef)
+      : query(ordersRef, where("assignedUnits", "array-contains", selectedAssetUnit));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: any[] = [];
@@ -390,16 +402,19 @@ export function AdminDashboard() {
 
     const activeOrders = orders.filter(order => {
       const status = order.Status || order.status || "Pending";
-      if (status === "Cancelled" || status === "Completed") return false;
+      if (!isInventoryOccupyingStatus(status)) return false;
 
       const startStr = order["Start date"] || order.startDate;
-      const endStr = order["End date"] || order.endDate;
+      const endStr = getEffectiveEndDate(order);
       if (!startStr || !endStr) return false;
 
-      const orderStart = new Date(startStr);
-      const startOnly = new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate()).getTime();
-      const orderEnd = new Date(endStr);
-      const endOnly = new Date(orderEnd.getFullYear(), orderEnd.getMonth(), orderEnd.getDate()).getTime();
+      const orderStart = parseLocalDate(startStr);
+      if (isNaN(orderStart.getTime())) return false;
+      const startOnly = orderStart.getTime();
+
+      const orderEnd = parseLocalDate(endStr);
+      if (isNaN(orderEnd.getTime())) return false;
+      const endOnly = orderEnd.getTime();
 
       return targetTime >= startOnly && targetTime <= endOnly;
     });
@@ -718,6 +733,67 @@ export function AdminDashboard() {
     }
   };
 
+  const handleExtendBooking = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!extendingOrder) return;
+
+    const originalEndStr = extendingOrder["End date"] || extendingOrder.endDate || "";
+    if (!originalEndStr) {
+      alert("Error: Original booking does not have a valid end date.");
+      return;
+    }
+
+    if (!extensionEndDate) {
+      alert("Please provide a valid new End Date.");
+      return;
+    }
+
+    const originalEnd = new Date(originalEndStr);
+    const newEnd = new Date(extensionEndDate);
+
+    if (newEnd <= originalEnd) {
+      alert("New End Date must be strictly after the original End Date: " + originalEndStr);
+      return;
+    }
+
+    const diffTime = newEnd.getTime() - originalEnd.getTime();
+    const addedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    setIsSubmitExtending(true);
+    try {
+      const orderRef = doc(db, "orders", extendingOrder.id);
+      
+      const currentExtensions = Array.isArray(extendingOrder.extensions) ? [...extendingOrder.extensions] : [];
+      const extraRevNum = parseFloat(extensionRevenue) || 0;
+
+      const newLog = {
+        addedDays,
+        extraRevenue: extraRevNum,
+        newEndDate: extensionEndDate,
+        dateModified: new Date().toISOString()
+      };
+      const updatedExtensions = [...currentExtensions, newLog];
+
+      const currentTotalRev = parseFloat(extendingOrder["Total Revenue"] || "0") || parseFloat(extendingOrder["Rent Amount"] || "0") || 0;
+      const newTotalRev = String(currentTotalRev + extraRevNum);
+
+      const updates = {
+        "End date": extensionEndDate,
+        "endDate": extensionEndDate,
+        "Total Revenue": newTotalRev,
+        extensions: updatedExtensions
+      };
+
+      await setDoc(orderRef, updates, { merge: true });
+      setExtendingOrder(null);
+    } catch (err: any) {
+      console.error("Failed to extend booking:", err);
+      alert("Error saving booking extension: " + err.message);
+    } finally {
+      setIsSubmitExtending(false);
+    }
+  };
+
   const handleCreateManualOrder = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "orders"));
@@ -925,24 +1001,40 @@ export function AdminDashboard() {
     return days;
   }, [currentMonth, currentYear]);
 
+  const parseLocalDate = (dateStr: string): Date => {
+    if (!dateStr) return new Date(NaN);
+    const trimmed = dateStr.trim();
+    const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (matchYMD) {
+      return new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
+    }
+    const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (matchDMY) {
+      return new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
+    }
+    const d = new Date(trimmed);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  };
+
+  const getEffectiveEndDate = (order: any): string => {
+    if (Array.isArray(order.extensions) && order.extensions.length > 0) {
+      const lastExt = order.extensions[order.extensions.length - 1];
+      if (lastExt && (lastExt.newEndDate || lastExt.endDate)) {
+        return lastExt.newEndDate || lastExt.endDate;
+      }
+    }
+    return order["End date"] || order.endDate || "";
+  };
+
+  const isInventoryOccupyingStatus = (status: string): boolean => {
+    if (!status) return false;
+    const s = status.trim().toLowerCase();
+    return ["active", "confirmed", "extended", "in progress", "in-progress", "pending"].includes(s);
+  };
+
   const getOrdersForDayAndUnit = (day: Date, unit: string) => {
     if (!day) return [];
     const targetTime = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0).getTime();
-
-    const parseLocalDate = (dateStr: string): Date => {
-      if (!dateStr) return new Date(NaN);
-      const trimmed = dateStr.trim();
-      const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (matchYMD) {
-        return new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
-      }
-      const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-      if (matchDMY) {
-        return new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
-      }
-      const d = new Date(trimmed);
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-    };
 
     // Use query-based calendarOrders for gears visual calendar, fallback to list logic
     const sourceOrders = (calendarMode === "gears" && selectedAssetUnit) ? calendarOrders : orders;
@@ -952,7 +1044,7 @@ export function AdminDashboard() {
       if (oStatus === "Cancelled" || oStatus === "Rejected") return false;
 
       const startStr = order["Start date"] || order.startDate;
-      const endStr = order["End date"] || order.endDate;
+      const endStr = getEffectiveEndDate(order);
       if (!startStr || !endStr) return false;
       
       const orderStart = parseLocalDate(startStr);
@@ -975,6 +1067,145 @@ export function AdminDashboard() {
 
       return isDateMatched && hasUnit;
     });
+  };
+
+  const parseOrderItemsFromDashboard = (order: any) => {
+    const items: { id: string; quantity: number }[] = [];
+
+    if (Array.isArray(order.cart)) {
+      order.cart.forEach((item: any) => {
+        items.push({ id: item.id, quantity: Number(item.quantity) || 1 });
+      });
+      return items;
+    }
+    
+    if (Array.isArray(order.items)) {
+      order.items.forEach((item: any) => {
+        items.push({ id: item.id || item.itemId, quantity: Number(item.quantity) || 1 });
+      });
+      return items;
+    }
+
+    const assetsStr = order.Assets || order.assets || "";
+    if (assetsStr && typeof assetsStr === "string") {
+      const patterns = [
+        { id: "combo-theatre", names: ["Gaming Theatre", "combo-theatre"] },
+        { id: "combo-party", names: ["Full Party Setup", "combo-party"] },
+        { id: "combo-racing", names: ["PS5 Mega Racing Combo", "Mega Racing Combo", "combo-racing"] },
+        { id: "hw-ps5", names: ["Play Station 5", "PS5 console", "hw-ps5"] },
+        { id: "hw-speaker", names: ["JBL Party Speaker", "JBL Speaker", "hw-speaker", "Speaker"] },
+        { id: "hw-projector", names: ["Full HD Projector", "Projector", "hw-projector"] }
+      ];
+
+      const parts = assetsStr.split(",");
+      parts.forEach(part => {
+        let qty = 1;
+        const qtyMatch = part.match(/\(x(\d+)\)/i);
+        if (qtyMatch) {
+          qty = parseInt(qtyMatch[1], 10);
+        }
+
+        for (const pattern of patterns) {
+          const matches = pattern.names.some(name => part.toLowerCase().includes(name.toLowerCase()));
+          if (matches) {
+            items.push({ id: pattern.id, quantity: qty });
+            break;
+          }
+        }
+      });
+    }
+
+    return items;
+  };
+
+  const getDailyAggregateStats = (day: Date, masterCategory: string) => {
+    let capacity = 1;
+    let categoryKey = "";
+    if (masterCategory === "ALL_PS5s") {
+      capacity = 2;
+      categoryKey = "ps5";
+    } else if (masterCategory === "ALL_Projectors") {
+      capacity = 1;
+      categoryKey = "projector";
+    } else if (masterCategory === "ALL_Speakers") {
+      capacity = 1;
+      categoryKey = "speaker";
+    }
+
+    const dTime = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+    const targetTime = dTime.getTime();
+
+    // Identify global lockout
+    const hasEventLockout = calendarOrders.some(order => {
+      const orderStatus = order["Order Status"] || order.Status || order.status || "";
+      if (!isInventoryOccupyingStatus(orderStatus)) return false;
+
+      const isEvent = (order.bookingType || order.type || order.booking_type || "").toLowerCase() === "event" ||
+                      (order.Assets || "").toLowerCase().includes("event");
+      if (!isEvent) return false;
+
+      const oStartStr = order["Start date"] || order.startDate;
+      const oEndStr = getEffectiveEndDate(order);
+      if (!oStartStr || !oEndStr) return false;
+
+      const oStart = parseLocalDate(oStartStr);
+      const oEnd = parseLocalDate(oEndStr);
+      if (isNaN(oStart.getTime()) || isNaN(oEnd.getTime())) return false;
+
+      return targetTime >= oStart.getTime() && targetTime <= oEnd.getTime();
+    });
+
+    if (hasEventLockout) {
+      return {
+        capacity: 0,
+        demand: 0,
+        available: 0,
+        eventLockout: true
+      };
+    }
+
+    let totalDemand = 0;
+
+    calendarOrders.forEach(order => {
+      const orderStatus = order["Order Status"] || order.Status || order.status || "";
+      if (!isInventoryOccupyingStatus(orderStatus)) return;
+
+      const oStartStr = order["Start date"] || order.startDate;
+      const oEndStr = getEffectiveEndDate(order);
+      if (!oStartStr || !oEndStr) return;
+
+      const oStart = parseLocalDate(oStartStr);
+      const oEnd = parseLocalDate(oEndStr);
+      if (isNaN(oStart.getTime()) || isNaN(oEnd.getTime())) return;
+
+      if (targetTime >= oStart.getTime() && targetTime <= oEnd.getTime()) {
+        const items = parseOrderItemsFromDashboard(order);
+        items.forEach(item => {
+          if (categoryKey === "ps5") {
+            if (item.id === "hw-ps5" || item.id === "combo-theatre") {
+              totalDemand += item.quantity;
+            }
+          } else if (categoryKey === "projector") {
+            if (item.id === "hw-projector" || item.id === "combo-theatre" || item.id === "combo-party") {
+              totalDemand += item.quantity;
+            }
+          } else if (categoryKey === "speaker") {
+            if (item.id === "hw-speaker" || item.id === "combo-party") {
+              totalDemand += item.quantity;
+            }
+          }
+        });
+      }
+    });
+
+    const available = capacity - totalDemand;
+
+    return {
+      capacity,
+      demand: totalDemand,
+      available,
+      eventLockout: false
+    };
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -2118,7 +2349,19 @@ export function AdminDashboard() {
                           {renderEditableTextCell("Managed By", "", order)}
 
                           {/* 22. Actions */}
-                          <td className="px-4 py-4 text-center whitespace-nowrap">
+                          <td className="px-4 py-4 text-center whitespace-nowrap space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExtendingOrder(order);
+                                setExtensionEndDate(order["End date"] || order.endDate || "");
+                                setExtensionRevenue("0");
+                              }}
+                              className="p-2 bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black rounded-lg border border-cyan-500/20 hover:border-cyan transition-all cursor-pointer inline-flex items-center justify-center mr-1"
+                              title="Extend Booking"
+                            >
+                              <Calendar size={13} />
+                            </button>
                             <button
                               onClick={() => handleDeleteOrder(order.id)}
                               className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg border border-red-500/20 hover:border-red-500 transition-all cursor-pointer inline-flex items-center justify-center"
@@ -2265,13 +2508,20 @@ export function AdminDashboard() {
                       onChange={(e) => setSelectedAssetUnit(e.target.value)}
                       className="bg-black/80 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-afterhours-green focus:border-afterhours-green focus:outline-none cursor-pointer uppercase tracking-wider"
                     >
-                      {allGearUnitsList.length === 0 ? (
-                        <option value="">No units created</option>
-                      ) : (
-                        allGearUnitsList.map(unit => (
-                          <option key={unit.id} value={unit.name}>{unit.name} ({unit.categoryName})</option>
-                        ))
-                      )}
+                      <optgroup label="Master Categories" className="bg-black text-afterhours-cyan">
+                        <option value="ALL_PS5s">ALL PS5s</option>
+                        <option value="ALL_Projectors">ALL Projectors</option>
+                        <option value="ALL_Speakers">ALL Speakers</option>
+                      </optgroup>
+                      <optgroup label="Individual Units" className="bg-black text-afterhours-green">
+                        {allGearUnitsList.length === 0 ? (
+                          <option value="">No individual units created</option>
+                        ) : (
+                          allGearUnitsList.map(unit => (
+                            <option key={unit.id} value={unit.name}>{unit.name} ({unit.categoryName})</option>
+                          ))
+                        )}
+                      </optgroup>
                     </select>
                   </div>
                 )}
@@ -2355,27 +2605,49 @@ export function AdminDashboard() {
                     );
                   }
 
+                  const isMasterCategory = calendarMode === "gears" && selectedAssetUnit.startsWith("ALL_");
                   const matchedOrders = getOrdersForDayAndUnit(day, selectedAssetUnit);
                   const isToday = new Date().toDateString() === day.toDateString();
                   
                   const addonStats = calendarMode === "addons" ? getSelectedAddonStatsForDay(day, selectedCalendarAddonId) : null;
+                  const aggStats = (isMasterCategory && day) ? getDailyAggregateStats(day, selectedAssetUnit) : null;
+
                   const isBooked = calendarMode === "addons"
                     ? (addonStats ? addonStats.booked > 0 : false)
-                    : matchedOrders.length > 0;
+                    : (isMasterCategory 
+                       ? (aggStats ? aggStats.demand > 0 : false)
+                       : matchedOrders.length > 0);
+
+                  let bgBorderClasses = "bg-[#121215]/40 border-white/5 hover:border-white/10";
+                  if (isToday) {
+                    bgBorderClasses = "bg-[#06b6d4]/5 border-[#06b6d4]/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]";
+                  } else if (calendarMode === "addons") {
+                    if (isBooked) {
+                      bgBorderClasses = "bg-[#a855f7]/10 border-[#a855f7]/30";
+                    }
+                  } else {
+                    if (isMasterCategory && aggStats) {
+                      if (aggStats.eventLockout) {
+                        bgBorderClasses = "bg-rose-950/20 border-rose-500/20";
+                      } else if (aggStats.available <= 0) {
+                        bgBorderClasses = "bg-rose-950/20 border-rose-500/25";
+                      } else if (aggStats.available > 0 && aggStats.available < aggStats.capacity) {
+                        bgBorderClasses = "bg-amber-950/20 border-amber-500/25";
+                      } else {
+                        bgBorderClasses = "bg-emerald-950/10 border-emerald-500/20";
+                      }
+                    } else if (isBooked) {
+                      bgBorderClasses = "bg-[#a855f7]/10 border-[#a855f7]/30";
+                    }
+                  }
 
                   return (
                     <div
                       key={day.toISOString()}
-                      className={`min-h-[110px] p-2.5 rounded-2xl border transition-all flex flex-col justify-between max-w-full overflow-hidden ${
-                        isToday 
-                          ? "bg-afterhours-cyan/5 border-afterhours-cyan/40 shadow-[0_0_15px_rgba(6,182,212,0.1)]" 
-                          : isBooked 
-                            ? "bg-afterhours-purple/10 border-afterhours-purple/30" 
-                            : "bg-[#121215]/40 border-white/5 hover:border-white/10"
-                      }`}
+                      className={`min-h-[110px] p-2.5 rounded-2xl border transition-all flex flex-col justify-between max-w-full overflow-hidden ${bgBorderClasses}`}
                     >
                       {/* Day Number */}
-                      <span className={`text-[10px] font-bold font-mono ${isToday ? "text-afterhours-cyan font-black" : "text-white/40"}`}>
+                      <span className={`text-[10px] font-bold font-mono ${isToday ? "text-[#06b6d4] font-black" : "text-white/40"}`}>
                         {day.getDate()}
                       </span>
 
@@ -2397,7 +2669,7 @@ export function AdminDashboard() {
                                 <div
                                   className={`p-1 px-1.5 rounded-lg text-white leading-tight font-mono text-[9px] ${
                                     stats.booked > 0 
-                                      ? "bg-afterhours-purple/20 border border-afterhours-purple/30" 
+                                      ? "bg-[#a855f7]/20 border border-[#a855f7]/30" 
                                       : "bg-white/5 border border-white/10 text-white/50"
                                   }`}
                                   title={`${cat?.name || "Addon"}: ${stats.booked} booked, ${stats.available} available from ${stats.owned}`}
@@ -2408,7 +2680,7 @@ export function AdminDashboard() {
                                   <div className="flex justify-between items-center text-[8px] mt-0.5 font-mono">
                                     <span className="text-white/40">Booked:</span>
                                     <span>
-                                      <span className={stats.booked > 0 ? "text-afterhours-purple font-black" : "text-white/40"}>
+                                      <span className={stats.booked > 0 ? "text-[#a855f7] font-black" : "text-white/40"}>
                                         {stats.booked}
                                       </span>
                                       <span className="text-white/20 mx-[2px]">/</span>
@@ -2423,7 +2695,7 @@ export function AdminDashboard() {
                                       className={`text-[8px] px-1 py-0.5 rounded flex justify-between items-center font-mono ${
                                         u.booked 
                                           ? "bg-red-500/10 text-red-400 border border-red-500/15" 
-                                          : "bg-green-500/5 text-afterhours-green border border-green-500/10"
+                                          : "bg-green-500/5 text-[#22c55e] border border-green-500/10"
                                       }`}
                                     >
                                       <span className="truncate max-w-[55px]">{u.unitName}</span>
@@ -2441,16 +2713,46 @@ export function AdminDashboard() {
                             </p>
                           )}
                         </div>
-                      ) : (
+                      ) : isMasterCategory ? (() => {
+                        const agg = getDailyAggregateStats(day, selectedAssetUnit);
+                        let colorClass = "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400";
+                        let statusText = "Idle";
+                        let statusValue = `${agg.available}/${agg.capacity}`;
+
+                        if (agg.eventLockout) {
+                          colorClass = "bg-rose-500/10 border border-rose-500/35 text-rose-400 animate-pulse";
+                          statusText = "LOCKOUT";
+                          statusValue = "0/0";
+                        } else if (agg.available <= 0) {
+                          colorClass = "bg-rose-500/10 border border-rose-500/35 text-rose-400";
+                          statusText = "OUT OF STOCK";
+                        } else if (agg.available > 0 && agg.available < agg.capacity) {
+                          colorClass = "bg-amber-500/10 border border-amber-500/35 text-amber-400";
+                          statusText = "PARTIAL";
+                        }
+
+                        return (
+                          <div className="flex-grow flex flex-col justify-end mt-2">
+                            <div className={`p-2 rounded-xl border ${colorClass} text-center space-y-1`}>
+                              <div className="text-[10px] font-black uppercase tracking-wider font-mono">
+                                {statusText}
+                              </div>
+                              <div className="text-[11px] font-mono font-bold">
+                                {statusValue} Available
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })() : (
                         /* Default Gears Unit Rented list */
                         <div className="space-y-1.5 mt-2 flex-grow overflow-y-auto max-h-[80px] no-scrollbar">
                           {matchedOrders.map(order => (
                             <div
                               key={order.id}
-                              className="p-1 px-1.5 rounded-lg bg-afterhours-purple/20 border border-afterhours-purple/30 text-white leading-tight"
+                              className="p-1 px-1.5 rounded-lg bg-[#a855f7]/20 border border-[#a855f7]/30 text-white leading-tight"
                               title={`Order: ${order["Order ID"] || order.id} \nClient: ${order["Name"] || "Anonymous"}`}
                             >
-                              <p className="text-[9px] font-black uppercase tracking-wider text-afterhours-cyan truncate">
+                              <p className="text-[9px] font-black uppercase tracking-wider text-[#06b6d4] truncate">
                                 {order["Name"] || "Anonymous"}
                               </p>
                               <p className="text-[8px] font-mono text-white/50 truncate">
@@ -3840,6 +4142,127 @@ export function AdminDashboard() {
                 >
                   Close Document
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Extend Booking Modal */}
+      <AnimatePresence>
+        {extendingOrder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
+            onClick={() => setExtendingOrder(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative max-w-md w-full bg-[#0a0a0d] border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 text-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/0 pb-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-[#06b6d4] font-black">Extension Engine Node</span>
+                  <h3 className="text-sm uppercase font-serif font-black tracking-[0.2em] text-white">
+                    Extend Booking
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setExtendingOrder(null)}
+                  className="p-1.5 rounded-full bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-all pointer-events-auto cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs font-mono">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-white/40 uppercase">Order ID:</span>
+                    <span className="text-[#06b6d4] font-bold">#{extendingOrder["Order ID"] || extendingOrder.id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/40 uppercase">Client:</span>
+                    <span className="text-white font-bold">{extendingOrder.Name || "Manual Client"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/40 uppercase">Original End Date:</span>
+                    <span className="text-white/80 font-bold">{extendingOrder["End date"] || extendingOrder.endDate || "N/A"}</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleExtendBooking} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-white/60">New End Date</label>
+                    <input
+                      type="date"
+                      value={extensionEndDate}
+                      min={extendingOrder["End date"] || extendingOrder.endDate || ""}
+                      onChange={(e) => setExtensionEndDate(e.target.value)}
+                      required
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/20 font-mono font-bold focus:border-[#06b6d4] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-white/60">Extension Price / Revenue (₹)</label>
+                    <input
+                      type="number"
+                      value={extensionRevenue}
+                      min="0"
+                      onChange={(e) => setExtensionRevenue(e.target.value)}
+                      required
+                      placeholder="e.g. 1500"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/20 font-mono font-bold focus:border-[#06b6d4] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Calculations summary preview */}
+                  {(() => {
+                    const origEndStr = extendingOrder["End date"] || extendingOrder.endDate || "";
+                    if (!origEndStr || !extensionEndDate) return null;
+                    const origEnd = new Date(origEndStr);
+                    const newEnd = new Date(extensionEndDate);
+                    if (isNaN(origEnd.getTime()) || isNaN(newEnd.getTime()) || newEnd <= origEnd) return null;
+                    const diffTime = newEnd.getTime() - origEnd.getTime();
+                    const addedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                    return (
+                      <div className="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl flex justify-between items-center text-[11px] text-emerald-400">
+                        <span>Proposed Extension:</span>
+                        <span className="font-bold">+{addedDays} Day{addedDays > 1 ? "s" : ""} (@ +₹{parseFloat(extensionRevenue) || 0})</span>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex gap-3 justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setExtendingOrder(null)}
+                      className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer text-white flex items-center justify-center"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitExtending}
+                      className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest bg-[#06b6d4] text-black hover:scale-[1.01] active:scale-[0.99] disabled:bg-neutral-800 disabled:text-white/40 disabled:cursor-not-allowed rounded-xl transition-all cursor-pointer font-bold flex items-center gap-1.5"
+                    >
+                      {isSubmitExtending ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Extending...</span>
+                        </>
+                      ) : (
+                        <span>Confirm Extension</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </div>
             </motion.div>
           </motion.div>

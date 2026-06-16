@@ -11,6 +11,7 @@ import { db, storage, auth, handleFirestoreError, OperationType } from "../fireb
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, doc, runTransaction, setDoc, getDocs, getDoc } from "firebase/firestore";
+import { useAvailability } from "../hooks/useAvailability";
 
 interface CheckoutItem {
   id: string;
@@ -46,6 +47,9 @@ export function Checkout() {
   const [paymentError, setPaymentError] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
   const [assignedUnits, setAssignedUnits] = useState<string[]>([]);
+
+  const { isCartAvailable } = useAvailability(checkoutData?.startDate, checkoutData?.endDate);
+  const isCartStillAvailable = checkoutData ? isCartAvailable(checkoutData.cart, checkoutData.startDate, checkoutData.endDate) : true;
 
   const checkDatesOverlap = (oStartStr: string, oEndStr: string, rStartStr: string, rEndStr: string) => {
     if (!oStartStr || !oEndStr || !rStartStr || !rEndStr) return false;
@@ -485,6 +489,12 @@ export function Checkout() {
     setPaymentError("");
     setAvailabilityError("");
 
+    if (!isCartStillAvailable) {
+      setIsProcessing(false);
+      setAvailabilityError("This setup is currently fully deployed during these dates. Please select alternative dates.");
+      return;
+    }
+
     const assigned = await checkInventoryAvailability();
     setAssignedUnits(assigned);
 
@@ -785,6 +795,11 @@ Here are my remaining details for delivery:
     }
 
     setIsSyncingDelivery(true);
+    if (!isCartStillAvailable) {
+      setIsSyncingDelivery(false);
+      setDeliveryError("This setup is currently fully deployed during these dates. Please select alternative dates.");
+      return;
+    }
     try {
       // Final re-verification of date block allocation
       const assigned = await checkInventoryAvailability();
@@ -1249,6 +1264,15 @@ Here are my remaining details for delivery:
 
                 {/* TASK 3: CALL TO ACTION & RAZORPAY MODAL ACCELERATOR */}
                 <div className="pt-6 border-t border-white/5 space-y-4">
+                  {!isCartStillAvailable && (
+                    <div id="out-of-stock-banner" className="flex items-start gap-3 p-4 bg-red-950/40 border border-red-500/30 rounded-2xl text-red-400 text-xs leading-relaxed font-mono animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                      <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                      <div>
+                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-red-200 font-bold">Inventory Lockout / Out of Stock:</strong>
+                        One or more items in your cart exceed the live inventory capacity limits for these dates, or there is an active global event lockout. Please select alternative dates or adjust your gear.
+                      </div>
+                    </div>
+                  )}
                   {availabilityError && (
                     <div className="flex items-start gap-2.5 p-4 bg-yellow-950/45 border border-yellow-500/25 rounded-2xl text-yellow-400 text-xs leading-relaxed font-mono">
                       <AlertCircle size={16} className="shrink-0 mt-0.5 text-yellow-500" />
@@ -1286,7 +1310,8 @@ Here are my remaining details for delivery:
                   </div>
 
                   <button
-                    disabled={isProcessing || !termsAccepted}
+                    id="payment-proceed-btn"
+                    disabled={isProcessing || !termsAccepted || !isCartStillAvailable}
                     onClick={handleRazorpayPayment}
                     className="w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.02] active:scale-98 shadow-[0_0_30px_rgba(168,85,247,0.25)] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none"
                   >

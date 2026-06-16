@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { GearAssistant } from "@/src/components/sections/GearAssistant";
 import { fixedPriceCodes } from "../lib/fixedPriceCodes";
 import { db, handleFirestoreError, OperationType } from "../firebase";
+import { useAvailability } from "../hooks/useAvailability";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, increment } from "firebase/firestore";
 
 // --- Types ---
@@ -186,6 +187,9 @@ export function Rentals() {
     name: "",
     phone: ""
   });
+
+  const { isCartAvailable } = useAvailability(startDate, endDate);
+  const isCartStillAvailable = (startDate && endDate && cart.length > 0) ? isCartAvailable(cart, startDate, endDate) : true;
 
   // --- Firebase Premium Games Subscription ---
   const [premiumGames, setPremiumGames] = useState<any[]>([]);
@@ -1177,8 +1181,17 @@ export function Rentals() {
                   <span className="text-afterhours-cyan">₹{finalTotal}</span>
                 </div>
               </div>
+
+              {!isCartStillAvailable && (
+                <div className="flex items-start gap-2 p-4 bg-red-950/30 border border-red-500/30 rounded-xl text-red-400 text-xs font-mono">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  <span>Selected setup is Out of Stock / exceeds capacity limit on these dates. Please edit dates or gear.</span>
+                </div>
+              )}
+
               <button 
-                disabled={cart.length === 0 || !startDate || !endDate}
+                id="rentals-proceed-checkout-btn"
+                disabled={cart.length === 0 || !startDate || !endDate || !isCartStillAvailable}
                 onClick={handleCheckoutRedirect}
                 className="w-full py-5 rounded-2xl bg-linear-to-r from-afterhours-purple to-afterhours-cyan text-black font-black uppercase tracking-[0.2em] text-sm disabled:opacity-50 disabled:grayscale transition-all hover:scale-[1.02] active:scale-95 shadow-2xl"
               >

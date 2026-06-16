@@ -11,6 +11,7 @@ const navLinks = [
   { name: "Rentals", path: "/rentals" },
   { name: "Experiences", path: "/experiences" },
   { name: "Blog", path: "/blog" },
+  { name: "Partner Portal", path: "/partner-dashboard" },
   { name: "Contact", path: "/contact" },
 ];
 
