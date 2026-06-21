@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase";
-import { PartnerNavbar } from "../components/layout/PartnerNavbar";
 import { 
   Building2, 
   Wallet, 
@@ -292,7 +291,6 @@ export function PartnerDashboard() {
 
   return (
     <div className="w-full bg-slate-50 text-slate-800 min-h-screen font-sans leading-relaxed flex flex-col pb-16">
-      <PartnerNavbar />
 
       {/* Hero Banner Header with PlayStation Color Aesthetics */}
       <div className="bg-[#003791] text-white py-14 px-6 sm:px-8 relative overflow-hidden shadow-lg border-b border-blue-900">

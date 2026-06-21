@@ -34,17 +34,16 @@ export function GearAssistant({ onAddItems }: GearAssistantProps) {
 
   return (
     <div className="mb-24">
-      <div className="bg-afterhours-charcoal border border-white/10 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-afterhours-cyan/10 blur-[100px] -mr-32 -mt-32" />
+      <div className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-xs">
         
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-afterhours-cyan/20 flex items-center justify-center text-afterhours-cyan">
+            <div className="w-10 h-10 rounded-xl bg-[#003791]/10 flex items-center justify-center text-[#003791]">
               <Sparkles size={20} />
             </div>
             <div>
-              <h3 className="text-xl font-black uppercase italic">AI Gear Assistant</h3>
-              <p className="text-white/40 text-xs uppercase tracking-widest">Not sure what to pick? Ask me.</p>
+              <h3 className="text-xl font-black uppercase italic text-slate-800">AI Gear Assistant</h3>
+              <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold">Not sure what to pick? Ask me.</p>
             </div>
           </div>
 
@@ -55,12 +54,12 @@ export function GearAssistant({ onAddItems }: GearAssistantProps) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
               placeholder="e.g., 'I want to host a movie night for 5 friends' or 'I love racing games'"
-              className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/20 focus:outline-none focus:border-afterhours-cyan transition-all"
+              className="flex-1 bg-white border border-slate-200 rounded-2xl px-6 py-4 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#003791] focus:ring-1 focus:ring-[#003791] transition-all"
             />
             <button
               onClick={handleAsk}
               disabled={isLoading || !query.trim()}
-              className="bg-afterhours-cyan text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="bg-[#003791] text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition duration-300 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
               Ask AI
@@ -73,13 +72,13 @@ export function GearAssistant({ onAddItems }: GearAssistantProps) {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-8 pt-8 border-t border-white/10"
+                className="mt-8 pt-8 border-t border-slate-200"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <h4 className="text-afterhours-cyan text-[10px] font-bold uppercase tracking-widest mb-2">Recommendation</h4>
-                    <p className="text-white font-bold text-lg mb-4">{result.recommendation}</p>
-                    <p className="text-white/60 text-sm leading-relaxed">{result.reasoning}</p>
+                    <h4 className="text-[#003791] text-[10px] font-bold uppercase tracking-widest mb-2">Recommendation</h4>
+                    <p className="text-slate-800 font-bold text-lg mb-4">{result.recommendation}</p>
+                    <p className="text-slate-600 text-sm leading-relaxed">{result.reasoning}</p>
                   </div>
                   <div className="flex flex-col justify-center">
                     <button
@@ -88,13 +87,13 @@ export function GearAssistant({ onAddItems }: GearAssistantProps) {
                         setResult(null);
                         setQuery("");
                       }}
-                      className="w-full bg-white/5 border border-white/10 hover:border-afterhours-cyan hover:bg-afterhours-cyan/10 transition-all p-6 rounded-2xl flex items-center justify-between group"
+                      className="w-full bg-white border border-slate-200 hover:border-[#003791] hover:bg-slate-50 transition-all p-6 rounded-2xl flex items-center justify-between group cursor-pointer shadow-xs"
                     >
                       <div className="text-left">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Ready to book?</span>
-                        <span className="text-white font-black uppercase italic group-hover:text-afterhours-cyan transition-colors">Add Recommended Gear to Cart</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-1">Ready to book?</span>
+                        <span className="text-slate-800 font-black uppercase italic group-hover:text-[#003791] transition-colors">Add Recommended Gear to Cart</span>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-afterhours-cyan text-black flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="w-12 h-12 rounded-full bg-[#003791]/10 text-[#003791] flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Zap size={24} />
                       </div>
                     </button>
