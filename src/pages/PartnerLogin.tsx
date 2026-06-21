@@ -2,7 +2,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { auth, db, firebaseConfig } from "../firebase";
 import { motion } from "motion/react";
 import { Lock, Mail, AlertCircle, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
 
@@ -207,6 +207,20 @@ export function PartnerLogin() {
           </p>
         </div>
       </motion.div>
+
+      {/* Temporary Debug Box */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-yellow-500 rounded-3xl px-8 py-5 text-center z-50 shadow-[0_10px_40px_rgba(234,179,8,0.25)] backdrop-blur-md max-w-sm w-[90%] pointer-events-auto">
+        <p className="text-[10px] font-mono text-yellow-500 uppercase tracking-[0.2em] font-extrabold mb-1">
+          ⚠️ ACTIVE FIREBASE PROJECT ID
+        </p>
+        <p className="text-2xl md:text-3xl font-black font-mono text-yellow-300 animate-pulse tracking-tight select-all">
+          {firebaseConfig?.projectId || "NOT_FOUND"}
+        </p>
+        <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">
+          If this is incorrect, clear cache / use an incognito window.
+        </p>
+      </div>
+
     </div>
   );
 }

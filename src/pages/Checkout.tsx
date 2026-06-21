@@ -335,10 +335,10 @@ export function Checkout() {
 
   if (!checkoutData) {
     return (
-      <div className="min-h-screen bg-afterhours-black flex items-center justify-center text-white">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-800">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-afterhours-purple border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/40 uppercase tracking-widest text-xs font-bold font-mono">Loading Checkout Arena...</p>
+          <div className="w-12 h-12 border-4 border-[#003791] border-t-transparent rounded-full animate-spin" />
+          <p className="text-slate-500 uppercase tracking-widest text-xs font-bold font-mono">Loading Checkout Arena...</p>
         </div>
       </div>
     );
@@ -904,17 +904,17 @@ Here are my remaining details for delivery:
   };
 
   return (
-    <div className="pt-32 pb-24 bg-afterhours-black min-h-screen text-white relative overflow-hidden">
+    <div className="pt-32 pb-24 bg-slate-50 min-h-screen text-slate-800 relative overflow-hidden">
       {/* Background glowing meshes */}
-      <div className="absolute top-1/4 -left-1/4 w-[500px] h-[500px] bg-afterhours-purple/10 blur-[150px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-afterhours-green/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/4 -left-1/4 w-[500px] h-[500px] bg-blue-100/30 blur-[150px] rounded-full pointer-events-none animate-none" />
+      <div className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-indigo-100/30 blur-[150px] rounded-full pointer-events-none animate-none" />
 
       <div className="container mx-auto px-6 max-w-6xl relative z-10">
         
         {/* Back Link */}
         <button 
           onClick={() => navigate("/rentals")}
-          className="group inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/40 hover:text-white mb-12 transition-colors"
+          className="group inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#003791] hover:text-blue-800 mb-12 transition-colors cursor-pointer"
         >
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
           Back to Rental Arena
@@ -933,50 +933,50 @@ Here are my remaining details for delivery:
               {/* TASK 1: LEFT SIDE - ORDER SUMMARY */}
               <div className="lg:col-span-5 space-y-8">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-black uppercase italic tracking-tight mb-2">
-                    Secure <span className="text-afterhours-purple">Checkout</span>
+                  <h1 className="text-3xl md:text-4xl font-black uppercase italic tracking-tight mb-2 text-slate-800">
+                    Secure <span className="text-[#003791]">Checkout</span>
                   </h1>
-                  <p className="text-white/40 text-xs uppercase font-bold tracking-widest">
+                  <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">
                     Verify Arena configuration before reservation
                   </p>
                 </div>
 
-                {/* Sleek Glassmorphism Card */}
-                <div className="bg-afterhours-gray/80 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-afterhours-purple/10 blur-2xl rounded-full" />
+                {/* Sleek Premium Card */}
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 space-y-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#003791]/5 blur-2xl rounded-full pointer-events-none" />
                   
                   {/* Period Block */}
-                  <div className="border-b border-white/5 pb-6">
-                    <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block mb-2">
+                  <div className="border-b border-slate-100 pb-6">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] block mb-2">
                       Rental Period ({getDaysCount()} days)
                     </span>
                     <div className="flex items-center gap-3">
-                      <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-afterhours-purple">
+                      <div className="bg-[#003791]/5 p-2 rounded-xl border border-[#003791]/10 text-[#003791]">
                         <Calendar size={18} />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm tracking-tight text-white">{startDate}</span>
-                        <span className="text-white/30 text-xs">➔</span>
-                        <span className="font-mono text-sm tracking-tight text-white">{endDate}</span>
+                        <span className="font-mono text-sm tracking-tight text-slate-800 font-bold">{startDate}</span>
+                        <span className="text-slate-300 text-xs">➔</span>
+                        <span className="font-mono text-sm tracking-tight text-slate-800 font-bold">{endDate}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Cart Items */}
                   <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin">
-                    <span className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em] block">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] block">
                       Selected Assets
                     </span>
                     {cart.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-black/40 border border-white/5">
+                      <div key={item.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                         <div className="flex-1">
-                          <h4 className="text-xs font-black uppercase italic text-white/90">{item.name}</h4>
-                          <p className="text-[10px] text-white/40 uppercase tracking-wider mt-0.5">
+                          <h4 className="text-xs font-black uppercase italic text-slate-800">{item.name}</h4>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">
                             ₹{item.price} / day × {item.quantity}
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs font-bold text-afterhours-cyan font-mono">
+                          <span className="text-xs font-bold text-[#003791] font-mono">
                             ₹{item.calculatedPrice}
                           </span>
                         </div>
@@ -985,14 +985,14 @@ Here are my remaining details for delivery:
                   </div>
 
                   {/* Pricing Breakdown */}
-                  <div className="border-t border-white/5 pt-6 space-y-3 text-sm">
-                    <div className="flex justify-between text-white/55">
+                  <div className="border-t border-slate-100 pt-6 space-y-3 text-sm">
+                    <div className="flex justify-between text-slate-500">
                       <span className="text-xs uppercase tracking-wider">Subtotal</span>
-                      <span className="font-mono">₹{subtotal}</span>
+                      <span className="font-mono text-slate-800">₹{subtotal}</span>
                     </div>
 
                     {discount > 0 && (
-                      <div className="flex justify-between text-afterhours-green">
+                      <div className="flex justify-between text-green-600">
                         <span className="text-xs uppercase tracking-wider flex items-center gap-1 font-black">
                           <Tag size={12} /> {hasVipOverride ? "VIP Discount Applied" : "Promo Discount"}
                         </span>
@@ -1000,19 +1000,19 @@ Here are my remaining details for delivery:
                       </div>
                     )}
 
-                    <div className="flex justify-between text-white/55">
+                    <div className="flex justify-between text-slate-500">
                       <span className="text-xs uppercase tracking-wider">Setup & Safe Delivery</span>
-                      <span className="font-mono">₹{deliveryFee}</span>
+                      <span className="font-mono text-slate-800">₹{deliveryFee}</span>
                     </div>
 
-                    <div className="border-t border-white/5 pt-4 flex justify-between items-end">
+                    <div className="border-t border-slate-100 pt-4 flex justify-between items-end">
                       <div>
-                        <span className="text-[10px] uppercase font-bold text-white/40 tracking-widest block mb-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-1">
                           Total Value
                         </span>
-                        <span className="text-xs text-white/40 font-mono">(incl. taxes)</span>
+                        <span className="text-xs text-slate-400 font-mono">(incl. taxes)</span>
                       </div>
-                      <span className="text-3xl font-black italic text-afterhours-cyan font-mono drop-shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                      <span className="text-3xl font-black italic text-[#003791] font-mono">
                         ₹{finalTotal}
                       </span>
                     </div>
@@ -1020,11 +1020,11 @@ Here are my remaining details for delivery:
                 </div>
 
                 {/* Trust Signal badge */}
-                <div className="flex items-center gap-3 p-5 rounded-2xl bg-white/5 border border-white/10">
-                  <ShieldCheck className="text-afterhours-green shrink-0" size={24} />
+                <div className="flex items-center gap-3 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+                  <ShieldCheck className="text-green-600 shrink-0" size={24} />
                   <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Trustpilot Grade Security</h4>
-                    <p className="text-[9px] text-white/40 uppercase tracking-widest">
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-800">Trustpilot Grade Security</h4>
+                    <p className="text-[9px] text-slate-500 uppercase tracking-widest">
                       Encrypted Razorpay connection with 100% money back risk-protection.
                     </p>
                   </div>
@@ -1034,23 +1034,23 @@ Here are my remaining details for delivery:
               {/* TASK 1: RIGHT SIDE - PAYMENT SELECTION */}
               <div className="lg:col-span-7 space-y-8">
                 <div>
-                  <h2 className="text-xl font-black uppercase italic tracking-tight mb-2">
-                    Payment <span className="text-afterhours-green">Options</span>
+                  <h2 className="text-xl font-black uppercase italic tracking-tight mb-2 text-slate-800">
+                    Payment <span className="text-[#003791]">Options</span>
                   </h2>
-                  <p className="text-white/40 text-xs uppercase font-bold tracking-widest">
+                  <p className="text-slate-500 text-xs uppercase font-bold tracking-widest">
                     Choose your payment formula and unlock premium perks
                   </p>
                 </div>
 
                 {/* User Info Capsule */}
-                <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-white/5 border border-white/10">
+                <div className="grid grid-cols-2 gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
                   <div>
-                    <span className="text-[9px] uppercase font-mono text-white/40">Registered Name</span>
-                    <p className="text-xs font-bold text-white truncate">{name || "Quick Guest"}</p>
+                    <span className="text-[9px] uppercase font-mono text-slate-400">Registered Name</span>
+                    <p className="text-xs font-bold text-slate-800 truncate">{name || "Quick Guest"}</p>
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-mono text-white/40">Contact Number</span>
-                    <p className="text-xs font-bold text-white truncate">{phone || "Not specified"}</p>
+                    <span className="text-[9px] uppercase font-mono text-slate-400">Contact Number</span>
+                    <p className="text-xs font-bold text-slate-800 truncate">{phone || "Not specified"}</p>
                   </div>
                 </div>
 
@@ -1067,28 +1067,28 @@ Here are my remaining details for delivery:
                         setPaymentOption("reserve");
                       }
                     }}
-                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-purple ${
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#003791] ${
                       paymentOption === "reserve" 
-                        ? "bg-afterhours-gray border-afterhours-purple/60 shadow-[0_0_20px_rgba(168,85,247,0.1)]" 
-                        : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
+                        ? "bg-white border-[#003791] shadow-md ring-2 ring-[#003791]/15" 
+                        : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
                     }`}
                   >
                     <div className="mt-1 flex items-center justify-center">
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        paymentOption === "reserve" ? "border-afterhours-purple" : "border-white/30"
+                        paymentOption === "reserve" ? "border-[#003791]" : "border-slate-300"
                       }`}>
-                        {paymentOption === "reserve" && <div className="w-2.5 h-2.5 rounded-full bg-afterhours-purple" />}
+                        {paymentOption === "reserve" && <div className="w-2.5 h-2.5 rounded-full bg-[#003791]" />}
                       </div>
                     </div>
                     
                     <div className="flex-1">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-black uppercase italic text-white">
+                        <span className="text-sm font-black uppercase italic text-slate-800">
                           Reserve Now (Pay ₹{getReserveDepositAmount()} Deposit)
                         </span>
-                        <span className="text-xs font-bold text-white/60 font-mono">₹{getReserveDepositAmount()}</span>
+                        <span className="text-xs font-bold text-slate-800 font-mono">₹{getReserveDepositAmount()}</span>
                       </div>
-                      <p className="text-[11px] text-white/50 leading-relaxed">
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
                         Lock in your dates and gear today. The remaining balance (₹{finalTotal - getReserveDepositAmount()}) is due upon doorstep delivery and setup.
                       </p>
                     </div>
@@ -1104,33 +1104,33 @@ Here are my remaining details for delivery:
                         setPaymentOption("full");
                       }
                     }}
-                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 overflow-hidden cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-green ${
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex items-start gap-4 overflow-hidden cursor-pointer focus:outline-none focus:ring-1 focus:ring-green-600 ${
                       paymentOption === "full" 
-                        ? "bg-afterhours-gray border-afterhours-green/80 shadow-[0_0_25px_rgba(34,197,94,0.15)] ring-2 ring-afterhours-green/25" 
-                        : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
+                        ? "bg-white border-green-600 shadow-md ring-2 ring-green-600/15" 
+                        : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
                     }`}
                   >
                     {/* Pulsing visual halo banner */}
-                    <div className="absolute top-0 right-0 bg-afterhours-green text-black font-black uppercase tracking-[0.15em] text-[9px] px-4 py-1.5 rounded-bl-2xl">
+                    <div className="absolute top-0 right-0 bg-green-600 text-white font-black uppercase tracking-[0.15em] text-[9px] px-4 py-1.5 rounded-bl-2xl">
                       BEST VALUE / VIP PERK
                     </div>
 
                     <div className="mt-1 flex items-center justify-center">
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        paymentOption === "full" ? "border-afterhours-green" : "border-white/30"
+                        paymentOption === "full" ? "border-green-600" : "border-slate-300"
                       }`}>
-                        {paymentOption === "full" && <div className="w-2.5 h-2.5 rounded-full bg-afterhours-green" />}
+                        {paymentOption === "full" && <div className="w-2.5 h-2.5 rounded-full bg-green-600" />}
                       </div>
                     </div>
 
                     <div className="flex-1">
                       <div className="flex justify-between items-center mb-1 mr-28 sm:mr-32">
-                        <span className="text-sm font-black uppercase italic text-white flex items-center gap-1.5">
+                        <span className="text-sm font-black uppercase italic text-slate-800 flex items-center gap-1.5">
                           Pay in Full
                         </span>
-                        <span className="text-xs font-black text-afterhours-green font-mono">₹{finalTotal}</span>
+                        <span className="text-xs font-black text-green-600 font-mono">₹{finalTotal}</span>
                       </div>
-                      <p className="text-[11px] text-white/50 leading-relaxed max-w-lg mb-4">
+                      <p className="text-[11px] text-slate-500 leading-relaxed max-w-lg mb-4">
                         Settle your total today and choose a completely complimentary add-on (Extra Controller or Premium Game) during delivery setup!
                       </p>
 
@@ -1139,9 +1139,9 @@ Here are my remaining details for delivery:
                         <motion.div 
                           initial={{ opacity: 0, y: -5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-4"
+                          className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4"
                         >
-                          <span className="text-[9px] uppercase font-black tracking-widest text-afterhours-green flex items-center gap-1">
+                          <span className="text-[9px] uppercase font-black tracking-widest text-green-600 flex items-center gap-1">
                             <Sparkles size={11} /> Choose Your Complimentary VIP Perk Add-on:
                           </span>
                           <div className="grid grid-cols-2 gap-3">
@@ -1153,8 +1153,8 @@ Here are my remaining details for delivery:
                               }}
                               className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                 selectedVipPerk === "controller" 
-                                  ? "bg-afterhours-green/10 border-afterhours-green text-afterhours-green font-bold text-[10px] uppercase tracking-wider" 
-                                  : "bg-white/5 border-white/5 text-white/40 text-[10px] uppercase tracking-wider hover:border-white/10"
+                                  ? "bg-green-600/10 border-green-600 text-green-600 font-bold text-[10px] uppercase tracking-wider" 
+                                  : "bg-white border-slate-200 text-slate-500 text-[10px] uppercase tracking-wider hover:border-slate-300 hover:text-slate-700 shadow-xs"
                               }`}
                             >
                               Extra DualSense Controller
@@ -1167,8 +1167,8 @@ Here are my remaining details for delivery:
                               }}
                               className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                                 selectedVipPerk === "game" 
-                                  ? "bg-afterhours-green/10 border-afterhours-green text-afterhours-green font-bold text-[10px] uppercase tracking-wider" 
-                                  : "bg-white/5 border-white/5 text-white/40 text-[10px] uppercase tracking-wider hover:border-white/10"
+                                  ? "bg-green-600/10 border-green-600 text-green-600 font-bold text-[10px] uppercase tracking-wider" 
+                                  : "bg-white border-slate-200 text-slate-500 text-[10px] uppercase tracking-wider hover:border-slate-300 hover:text-slate-700 shadow-xs"
                               }`}
                             >
                               Additional Premium Game
@@ -1195,34 +1195,34 @@ Here are my remaining details for delivery:
                         }
                       }
                     }}
-                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex flex-col items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-afterhours-cyan ${
+                    className={`w-full text-left p-6 rounded-3xl border transition-all relative flex flex-col items-start gap-4 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-600 ${
                       paymentOption === "custom_reserve" 
-                        ? "bg-afterhours-gray border-afterhours-cyan/60 shadow-[0_0_20px_rgba(34,211,238,0.1)]" 
-                        : "bg-afterhours-gray/30 border-white/5 hover:border-white/15"
+                        ? "bg-white border-[#003791] shadow-md ring-2 ring-[#003791]/15" 
+                        : "bg-white border-slate-200 hover:border-slate-300 shadow-sm"
                     } ${!getCustomDepositAmount() ? "opacity-95" : ""}`}
                   >
                     <div className="flex items-start gap-4 w-full">
                       <div className="mt-1 flex items-center justify-center">
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                          paymentOption === "custom_reserve" ? "border-afterhours-cyan" : "border-white/30"
+                          paymentOption === "custom_reserve" ? "border-[#003791]" : "border-slate-300"
                         }`}>
-                          {paymentOption === "custom_reserve" && <div className="w-2.5 h-2.5 rounded-full bg-afterhours-cyan" />}
+                          {paymentOption === "custom_reserve" && <div className="w-2.5 h-2.5 rounded-full bg-[#003791]" />}
                         </div>
                       </div>
                       
                       <div className="flex-1">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-black uppercase italic text-white flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-afterhours-cyan animate-pulse" />
+                          <span className="text-sm font-black uppercase italic text-slate-800 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#003791] animate-pulse" />
                             Option 3: Team-Shared Token Deposit
                           </span>
                           {getCustomDepositAmount() ? (
-                            <span className="text-xs font-black text-afterhours-cyan font-mono bg-afterhours-cyan/15 px-3 py-1 rounded-full border border-afterhours-cyan/25 animate-pulse">₹{getCustomDepositAmount()}</span>
+                            <span className="text-xs font-black text-[#003791] font-mono bg-[#003791]/10 px-3 py-1 rounded-full border border-[#003791]/20 animate-pulse">₹{getCustomDepositAmount()}</span>
                           ) : (
-                            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded border border-white/5 font-mono">CODE REQUIRED</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded border border-slate-200 font-mono">CODE REQUIRED</span>
                           )}
                         </div>
-                        <p className="text-[11px] text-white/50 leading-relaxed max-w-lg mb-4">
+                        <p className="text-[11px] text-slate-500 leading-relaxed max-w-lg mb-4">
                           Need a customized deposit token? Enter the exclusive booking lock code shared by our support agents during consultation.
                         </p>
                       </div>
@@ -1239,21 +1239,21 @@ Here are my remaining details for delivery:
                             setCheckoutSpecialCode(e.target.value.toUpperCase().trim());
                             setCheckoutSpecialError("");
                           }}
-                          className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono uppercase tracking-widest focus:outline-none focus:border-afterhours-cyan flex-1"
+                          className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-mono uppercase tracking-widest focus:outline-none focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/20 flex-1 text-slate-800"
                         />
                         <button
                           type="button"
                           onClick={handleApplySpecialCode}
-                          className="bg-afterhours-cyan/10 border border-afterhours-cyan text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black font-black uppercase tracking-wider text-[10px] px-4 py-2 rounded-xl transition-all"
+                          className="bg-[#003791]/5 border border-[#003791] text-[#003791] hover:bg-[#003791] hover:text-white font-black uppercase tracking-wider text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer shadow-xs"
                         >
                           Apply Token Code
                         </button>
                       </div>
                       {checkoutSpecialError && (
-                        <p className="text-[10px] text-red-400 font-mono italic mt-1.5">{checkoutSpecialError}</p>
+                        <p className="text-[10px] text-red-500 font-mono italic mt-1.5">{checkoutSpecialError}</p>
                       )}
                       {getCustomDepositAmount() && (
-                        <p className="text-[10px] text-afterhours-green font-mono italic mt-1.5 animate-pulse">
+                        <p className="text-[10px] text-green-600 font-mono italic mt-1.5 animate-pulse">
                           ✓ Token applied! Custom deposit of ₹{getCustomDepositAmount()} activated (remaining dues ₹{finalTotal - (getCustomDepositAmount() || 0)}).
                         </p>
                       )}
@@ -1263,46 +1263,46 @@ Here are my remaining details for delivery:
                 </div>
 
                 {/* TASK 3: CALL TO ACTION & RAZORPAY MODAL ACCELERATOR */}
-                <div className="pt-6 border-t border-white/5 space-y-4">
+                <div className="pt-6 border-t border-slate-200 space-y-4">
                   {!isCartStillAvailable && (
-                    <div id="out-of-stock-banner" className="flex items-start gap-3 p-4 bg-red-950/40 border border-red-500/30 rounded-2xl text-red-400 text-xs leading-relaxed font-mono animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                      <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                    <div id="out-of-stock-banner" className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs leading-relaxed font-mono animate-pulse shadow-xs">
+                      <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-600" />
                       <div>
-                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-red-200 font-bold">Inventory Lockout / Out of Stock:</strong>
+                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-red-800 font-bold">Inventory Lockout / Out of Stock:</strong>
                         One or more items in your cart exceed the live inventory capacity limits for these dates, or there is an active global event lockout. Please select alternative dates or adjust your gear.
                       </div>
                     </div>
                   )}
                   {availabilityError && (
-                    <div className="flex items-start gap-2.5 p-4 bg-yellow-950/45 border border-yellow-500/25 rounded-2xl text-yellow-400 text-xs leading-relaxed font-mono">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-yellow-500" />
+                    <div className="flex items-start gap-2.5 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-xs leading-relaxed font-mono shadow-xs font-sans">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-500" />
                       <div>
-                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-yellow-300 font-bold">Operational Alert:</strong>
+                        <strong className="block mb-1 uppercase tracking-wider text-[11px] text-amber-800 font-bold">Operational Alert:</strong>
                         {availabilityError}
                       </div>
                     </div>
                   )}
                   {paymentError && (
-                    <div className="flex items-center gap-2 p-4 bg-red-950/40 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
+                    <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-xs font-mono shadow-xs">
                       <AlertCircle size={16} /> {paymentError}
                     </div>
                   )}
                   {/* Mandatory Terms Checkbox ABOVE Proceed button */}
-                  <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-start gap-3">
+                  <div className="p-4 bg-white border border-slate-200 rounded-2xl flex items-start gap-3 shadow-xs">
                     <input
                       type="checkbox"
                       id="terms-checkbox-main"
                       checked={termsAccepted}
                       onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="mt-1 accent-afterhours-purple w-4 h-4 rounded border-white/10 bg-black/30 focus:ring-1 focus:ring-afterhours-purple cursor-pointer shrink-0"
+                      className="mt-1 accent-[#003791] w-4 h-4 rounded border-slate-300 bg-white focus:ring-1 focus:ring-[#003791] cursor-pointer shrink-0"
                     />
-                    <label htmlFor="terms-checkbox-main" className="text-xs text-white/70 hover:text-white transition-colors leading-relaxed font-sans font-medium cursor-pointer select-none">
+                    <label htmlFor="terms-checkbox-main" className="text-xs text-slate-600 hover:text-slate-800 transition-colors leading-relaxed font-sans font-medium cursor-pointer select-none">
                       I have read and accept the{" "}
                       <Link
                         to="/terms"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-afterhours-cyan hover:text-afterhours-pink underline font-bold transition-colors inline-block"
+                        className="text-[#003791] hover:text-[#003791]/80 underline font-bold transition-colors inline-block"
                       >
                         Terms and Conditions
                       </Link>
@@ -1313,11 +1313,11 @@ Here are my remaining details for delivery:
                     id="payment-proceed-btn"
                     disabled={isProcessing || !termsAccepted || !isCartStillAvailable}
                     onClick={handleRazorpayPayment}
-                    className="w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.02] active:scale-98 shadow-[0_0_30px_rgba(168,85,247,0.25)] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none"
+                    className="w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] transition-all bg-[#003791] text-white hover:bg-blue-900 hover:scale-[1.01] active:scale-99 shadow-md flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none cursor-pointer"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         Connecting to Razorpay...
                       </>
                     ) : (
@@ -1328,11 +1328,11 @@ Here are my remaining details for delivery:
                   </button>
 
                   {/* Payment Breakdown Summary Tag */}
-                  <div className="mt-4 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-white/40">
+                  <div className="mt-4 flex items-center justify-center gap-4 text-[10px] uppercase tracking-wider text-slate-400">
                     <span className="flex items-center gap-1">
                       <Clock size={12} /> Instant Allocation
                     </span>
-                    <span className="text-white/20">•</span>
+                    <span className="text-slate-200">•</span>
                     <span className="flex items-center gap-1">
                       <ShieldCheck size={12} /> SSL Encrypted
                     </span>
@@ -1349,58 +1349,58 @@ Here are my remaining details for delivery:
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="max-w-2xl mx-auto py-8 p-10 bg-afterhours-gray/90 border border-afterhours-purple/30 rounded-[3rem] relative overflow-hidden backdrop-blur-xl shadow-2xl space-y-8"
+              className="max-w-2xl mx-auto py-8 p-10 bg-white border border-slate-200 rounded-[3rem] relative overflow-hidden shadow-md space-y-8"
             >
-              <div className="absolute top-0 right-0 w-48 h-48 bg-afterhours-purple/10 blur-[90px] rounded-full pointer-events-none" />
+              <div className="absolute top-0 right-0 w-48 h-48 bg-[#003791]/5 blur-[90px] rounded-full pointer-events-none" />
 
               <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-afterhours-green/10 border border-afterhours-green/30 text-afterhours-green flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto mb-4 shadow-xs">
                   <span className="text-2xl font-bold animate-pulse">✓</span>
                 </div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight mb-1 text-white">
-                  Payment <span className="text-afterhours-green">Authorized!</span>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight mb-1 text-slate-800">
+                  Payment <span className="text-[#003791]">Authorized!</span>
                 </h2>
-                <p className="text-[10px] text-afterhours-green uppercase font-bold tracking-widest bg-afterhours-green/10 border border-afterhours-green/20 py-1.5 px-4 rounded-full inline-block mb-3">
+                <p className="text-[10px] text-green-700 uppercase font-bold tracking-widest bg-green-50 border border-green-200 py-1.5 px-4 rounded-full inline-block mb-3">
                   Verification Complete
                 </p>
-                <p className="text-white/60 text-xs max-w-md mx-auto leading-relaxed">
+                <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
                   Share remaining details for smooth delivery. Our dispatch team will use these coordinates to lock in your setup location.
                 </p>
               </div>
 
               {/* Already Filled - Read-Only Auto-Populated Configuration Summary */}
               <div>
-                <span className="text-[10px] uppercase font-bold text-white/40 tracking-widest block mb-1 font-mono">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-1 font-mono">
                   Already Filled (From Order Summary)
                 </span>
-                <div className="bg-black/45 border border-white/5 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-slate-700">
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Transaction ID</span>
-                    <span className="text-afterhours-cyan font-bold break-all">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest block mb-1">Transaction ID</span>
+                    <span className="text-[#003791] font-bold break-all">
                       {paymentDetails?.paymentId || "N/A"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Total Paid Funds</span>
-                    <span className="text-white font-bold">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest block mb-1">Total Paid Funds</span>
+                    <span className="text-slate-800 font-bold">
                       ₹{paymentDetails?.amountPaid || calculatePaymentAmount()} ({paymentOption === "reserve" ? "₹500 Deposit" : paymentOption === "custom_reserve" ? `₹${getCustomDepositAmount()} Custom Deposit` : "Full"})
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Discount Applied</span>
-                    <span className="text-afterhours-green font-bold">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest block mb-1">Discount Applied</span>
+                    <span className="text-green-600 font-bold">
                       ₹{discount || 0} Saved
                     </span>
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">Asset Rented Out</span>
-                    <span className="text-white font-bold break-words">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest block mb-1">Asset Rented Out</span>
+                    <span className="text-slate-800 font-bold break-words">
                       {cart.map(item => `${item.name} (x${item.quantity})`).join(", ")}
                     </span>
                   </div>
-                  <div className="md:col-span-2 border-t border-white/5 pt-2">
-                    <span className="text-[9px] uppercase font-bold text-white/30 tracking-widest block mb-1">From and To Dates</span>
-                    <span className="text-white font-bold">
+                  <div className="md:col-span-2 border-t border-slate-200 pt-2">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-widest block mb-1">From and To Dates</span>
+                    <span className="text-slate-800 font-bold">
                       {startDate} to {endDate} ({getDaysCount()} Days)
                     </span>
                   </div>
@@ -1410,24 +1410,24 @@ Here are my remaining details for delivery:
               {/* Form Input Block */}
               {!currentUser ? (
                 /* Embedded Authentication Mandate Portal */
-                <div id="checkout-mandatory-auth" className="space-y-6 border border-white/5 bg-black/45 p-6 rounded-3xl relative overflow-hidden backdrop-blur-md">
-                  <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <div className="p-2.5 bg-afterhours-purple/15 text-afterhours-purple rounded-xl border border-afterhours-purple/35 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                <div id="checkout-mandatory-auth" className="space-y-6 border border-slate-200 bg-slate-50 p-6 rounded-3xl relative overflow-hidden">
+                  <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
+                    <div className="p-2.5 bg-blue-50 text-[#003791] rounded-xl border border-blue-100 shadow-xs">
                       <Lock size={18} />
                     </div>
                     <div className="text-left">
-                      <h3 className="text-sm font-black uppercase tracking-wider text-white">Security Verification Required</h3>
-                      <p className="text-[10px] text-white/50 uppercase font-mono leading-none">Register or Sign-in to lock-in delivery coordinates</p>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Security Verification Required</h3>
+                      <p className="text-[10px] text-slate-500 uppercase font-mono leading-none">Register or Sign-in to lock-in delivery coordinates</p>
                     </div>
                   </div>
 
                   {/* Tab Selector */}
-                  <div className="grid grid-cols-2 gap-2 bg-black/50 p-1 rounded-xl border border-white/5">
+                  <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button
                       type="button"
                       onClick={() => { setAuthFormMode("signup"); setAuthError(""); }}
                       className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-pointer transition-all ${
-                        authFormMode === "signup" ? "bg-afterhours-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"
+                        authFormMode === "signup" ? "bg-[#003791] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
                       <UserPlus size={10} className="inline mr-1" /> Sign Up
@@ -1436,7 +1436,7 @@ Here are my remaining details for delivery:
                       type="button"
                       onClick={() => { setAuthFormMode("login"); setAuthError(""); }}
                       className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-pointer transition-all ${
-                        authFormMode === "login" ? "bg-afterhours-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]" : "text-white/40 hover:text-white/70"
+                        authFormMode === "login" ? "bg-[#003791] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
                       <LogIn size={10} className="inline mr-1" /> Log In
@@ -1446,39 +1446,39 @@ Here are my remaining details for delivery:
                   <form onSubmit={handleForcedAuthSubmission} className="space-y-4">
                     {authFormMode === "signup" && (
                       <div className="space-y-1.5 text-left">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Full Name</label>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-slate-500 block">Full Name</label>
                         <input
                           type="text"
                           required
                           value={authName}
                           onChange={(e) => setAuthName(e.target.value)}
                           placeholder="Your full legal name"
-                          className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/20 outline-none transition-all text-slate-800 text-left placeholder-slate-400"
                         />
                       </div>
                     )}
 
                     <div className="space-y-1.5 text-left">
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Email Address</label>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-slate-500 block">Email Address</label>
                       <input
                         type="email"
                         required
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
                         placeholder="e.g. name@domain.com"
-                        className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/20 outline-none transition-all text-slate-800 text-left placeholder-slate-400"
                       />
                     </div>
 
                     <div className="space-y-1.5 text-left">
-                      <label className="text-[9px] uppercase font-bold tracking-widest text-white/55 block">Secret Password</label>
+                      <label className="text-[9px] uppercase font-bold tracking-widest text-slate-500 block">Secret Password</label>
                       <input
                         type="password"
                         required
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-neutral-950/60 border border-white/10 rounded-xl p-3 text-xs font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white text-left"
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/20 outline-none transition-all text-slate-800 text-left placeholder-slate-400"
                       />
                     </div>
 
@@ -1489,7 +1489,7 @@ Here are my remaining details for delivery:
                     <button
                       type="submit"
                       disabled={isAuthSubmitting}
-                      className="w-full py-4 mt-2 rounded-xl text-xs font-black uppercase tracking-[0.25em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-pink text-white hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                      className="w-full py-4 mt-2 rounded-xl text-xs font-black uppercase tracking-[0.25em] transition-all bg-[#003791] text-white hover:bg-blue-900 hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
                     >
                       {isAuthSubmitting && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                       {authFormMode === "signup" ? "Create Account & Unlock ➔" : "Authorize Session & Unlock ➔"}
@@ -1499,59 +1499,59 @@ Here are my remaining details for delivery:
               ) : (
                 <form onSubmit={handleDeliverySubmission} className="space-y-6">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-afterhours-purple tracking-widest block mb-3 font-mono">
+                  <span className="text-[10px] uppercase font-bold text-[#003791] tracking-widest block mb-3 font-mono">
                     Please Complete Required Fields
                   </span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
                     {/* Full Name */}
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Name</label>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">Name</label>
                       <input
                         type="text"
                         required
                         value={deliveryName}
                         onChange={(e) => setDeliveryName(e.target.value)}
                         placeholder="e.g. John Doe"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/25 outline-none transition-all text-slate-800 placeholder-slate-400"
                       />
                     </div>
 
                     {/* WhatsApp Number */}
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">WhatsApp Phone Number</label>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">WhatsApp Phone Number</label>
                       <input
                         type="tel"
                         required
                         value={deliveryPhone}
                         onChange={(e) => setDeliveryPhone(e.target.value)}
                         placeholder="e.g. 9999999999"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/25 outline-none transition-all text-slate-800 placeholder-slate-400"
                       />
                     </div>
 
                     {/* Email */}
                     <div className="md:col-span-2 space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Email Address</label>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">Email Address</label>
                       <input
                         type="email"
                         required
                         value={deliveryEmail}
                         onChange={(e) => setDeliveryEmail(e.target.value)}
                         placeholder="e.g. john@example.com"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/25 outline-none transition-all text-slate-800 placeholder-slate-400"
                       />
                     </div>
 
                     {/* Location Link */}
                     <div className="md:col-span-2 space-y-2">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Location Link</label>
+                        <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">Location Link</label>
                         <button
                           type="button"
                           onClick={handleGetCurrentLocation}
                           disabled={isDetectingLocation}
-                          className="text-[10px] uppercase font-bold tracking-wider text-afterhours-cyan hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 bg-afterhours-cyan/10 hover:bg-afterhours-cyan/25 border border-afterhours-cyan/20 py-1.5 px-3.5 rounded-full outline-none"
+                          className="text-[10px] uppercase font-bold tracking-wider text-[#003791] hover:text-blue-800 transition-colors cursor-pointer flex items-center gap-1.5 bg-[#003791]/5 hover:bg-[#003791]/10 border border-[#003791]/10 py-1.5 px-3.5 rounded-full outline-none"
                         >
                           <Navigation size={10} className={isDetectingLocation ? "animate-spin" : ""} />
                           {isDetectingLocation ? "Detecting Coordinates..." : "📍 Use My Current Location"}
@@ -1563,16 +1563,16 @@ Here are my remaining details for delivery:
                         value={deliveryLocation}
                         onChange={(e) => setDeliveryLocation(e.target.value)}
                         placeholder="e.g. https://maps.app.goo.gl/... or use button above"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-afterhours-purple focus:ring-1 focus:ring-afterhours-purple outline-none transition-all text-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-mono focus:border-[#003791] focus:ring-1 focus:ring-[#003791]/25 outline-none transition-all text-slate-800 placeholder-slate-400"
                       />
                     </div>
 
                     {/* Government ID / Corporate ID File Upload input (KYC) */}
                     <div className="md:col-span-2 space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">
-                        Upload Corporate ID / Government ID (For Zero-Deposit Verification) <span className="text-white/30 italic">(Optional)</span>
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-400 block">
+                        Upload Corporate ID / Government ID (For Zero-Deposit Verification) <span className="text-slate-300 italic">(Optional)</span>
                       </label>
-                      <div className="relative group border-2 border-dashed border-white/10 rounded-2xl p-6 bg-black/30 hover:bg-black/50 hover:border-afterhours-purple/40 transition-all flex flex-col items-center justify-center cursor-pointer">
+                      <div className="relative group border-2 border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50 hover:bg-white hover:border-[#003791]/40 transition-all flex flex-col items-center justify-center cursor-pointer">
                         <input
                           type="file"
                           accept=".pdf, image/jpeg, image/png"
@@ -1581,10 +1581,10 @@ Here are my remaining details for delivery:
                         />
                         <div className="text-center space-y-2 pointer-events-none">
                           <div className="text-xl">📁</div>
-                          <p className="text-xs text-white/70 font-semibold font-mono">
+                          <p className="text-xs text-slate-700 font-semibold font-mono">
                             {selectedFile ? `✓ Selected: ${selectedFile.name}` : "Click to select or drag & drop"}
                           </p>
-                          <p className="text-[9px] text-white/40 uppercase tracking-widest font-mono">
+                          <p className="text-[9px] text-slate-400 uppercase tracking-widest font-mono">
                             Supports PDF, JPEG, PNG (Max 3MB file size limit)
                           </p>
                         </div>
@@ -1595,21 +1595,21 @@ Here are my remaining details for delivery:
                     </div>
 
                     {/* Mandatory Legal Consent Checkbox */}
-                    <div className="md:col-span-2 pt-4 border-t border-white/5 space-y-2">
+                    <div className="md:col-span-2 pt-4 border-t border-slate-200 space-y-2">
                       <label className="relative flex items-start gap-3 cursor-pointer select-none group">
                         <input
                           type="checkbox"
                           checked={termsAccepted}
                           onChange={(e) => setTermsAccepted(e.target.checked)}
-                          className="mt-1 accent-afterhours-purple w-4 h-4 rounded border-white/10 bg-black/30 focus:ring-1 focus:ring-afterhours-purple cursor-pointer shrink-0"
+                          className="mt-1 accent-[#003791] w-4 h-4 rounded border-slate-300 bg-white focus:ring-1 focus:ring-[#003791] cursor-pointer shrink-0"
                         />
-                        <span className="text-xs text-white/70 group-hover:text-white transition-colors leading-relaxed font-sans font-medium">
+                        <span className="text-xs text-slate-600 group-hover:text-slate-800 transition-colors leading-relaxed font-sans font-medium">
                           I have read and accept the{" "}
                           <Link
                             to="/terms"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-afterhours-cyan hover:text-afterhours-pink underline font-bold transition-colors inline-block"
+                            className="text-[#003791] hover:text-[#003791]/80 underline font-bold transition-colors inline-block"
                           >
                             Terms and Conditions
                           </Link>
@@ -1621,7 +1621,7 @@ Here are my remaining details for delivery:
                 </div>
 
                 {deliveryError && (
-                  <div className="flex items-center gap-2 p-4 bg-red-950/40 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
+                  <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-xs font-mono">
                     <AlertCircle size={16} /> {deliveryError}
                   </div>
                 )}
@@ -1629,11 +1629,11 @@ Here are my remaining details for delivery:
                 <button
                   type="submit"
                   disabled={isSyncingDelivery || !termsAccepted}
-                  className="w-full py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] transition-all bg-gradient-to-r from-afterhours-purple to-afterhours-green text-black hover:scale-[1.01] active:scale-98 shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none"
+                  className="w-full py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] transition-all bg-[#003791] text-white hover:bg-blue-900 hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:pointer-events-none"
                 >
                   {isSyncingDelivery ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Saving remaining details...
                     </>
                   ) : (
@@ -1644,18 +1644,18 @@ Here are my remaining details for delivery:
                 <button
                   type="button"
                   onClick={handleWhatsAppFallback}
-                  className="w-full py-4 rounded-2xl text-xs font-bold uppercase tracking-[0.15em] transition-all bg-black/40 border border-[#25D366]/40 text-[#25D366] hover:bg-black/60 hover:border-[#25D366]/80 hover:scale-[1.01] active:scale-98 shadow-lg flex items-center justify-center gap-2 cursor-pointer text-center"
+                  className="w-full py-4 rounded-2xl text-xs font-bold uppercase tracking-[0.15em] transition-all bg-white border border-[#25D366]/40 text-[#25D366] hover:bg-slate-50 hover:border-[#25D366]/80 hover:scale-[1.01] active:scale-98 shadow-xs flex items-center justify-center gap-2 cursor-pointer text-center"
                 >
                   <span className="text-sm">💬</span> Having trouble? Send details via WhatsApp
                 </button>
               </form>
               )}
 
-              <div className="flex flex-col items-center border-t border-white/5 pt-4 space-y-2">
-                <span className="text-[10px] uppercase font-bold text-white/30 tracking-widest">or skip register setup</span>
+              <div className="flex flex-col items-center border-t border-slate-200 pt-4 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">or skip register setup</span>
                 <a
                   href="/index.html"
-                  className="px-8 py-3.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 rounded-full font-bold uppercase tracking-widest text-[11px] transition-all cursor-pointer hover:scale-[1.01] inline-block active:scale-98"
+                  className="px-8 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-755 border border-slate-200 rounded-full font-bold uppercase tracking-widest text-[11px] transition-all cursor-pointer hover:scale-[1.01] inline-block active:scale-98"
                 >
                   Return to Home
                 </a>
@@ -1667,45 +1667,45 @@ Here are my remaining details for delivery:
               key="payment-success-overlay"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="max-w-xl mx-auto text-center py-12 p-8 bg-afterhours-gray/50 border border-afterhours-green/20 rounded-[3rem] relative overflow-hidden backdrop-blur-xl shadow-2xl"
+              className="max-w-xl mx-auto text-center py-12 p-8 bg-white border border-slate-200 rounded-[3rem] relative overflow-hidden shadow-md"
             >
               {/* Dynamic shining particles grid */}
-              <div className="absolute top-0 right-0 w-48 h-48 bg-afterhours-green/10 blur-[90px] rounded-full pointer-events-none" />
+              <div className="absolute top-0 right-0 w-48 h-48 bg-[#003791]/5 blur-[90px] rounded-full pointer-events-none" />
               
-              <div className="w-16 h-16 rounded-full bg-afterhours-green/10 border border-afterhours-green/30 text-afterhours-green flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 size={36} className="animate-bounce" />
               </div>
 
-              <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight mb-2 text-white">
-                Delivery <span className="text-afterhours-cyan">Confirmed!</span>
+              <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tight mb-2 text-slate-800">
+                Delivery <span className="text-[#003791]">Confirmed!</span>
               </h2>
-              <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest bg-black/30 py-1.5 px-4 rounded-full inline-block mb-3">
+              <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest bg-slate-100 py-1.5 px-4 rounded-full inline-block mb-3 border border-slate-200">
                 Delivery Schedule Locked
               </p>
 
-              <div className="space-y-4 text-left bg-black/40 border border-white/5 p-6 rounded-2xl mb-8 font-mono text-xs">
-                <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="text-white/40 uppercase">Transaction ID</span>
-                  <span className="text-white font-bold">{paymentDetails?.paymentId}</span>
+              <div className="space-y-4 text-left bg-slate-50 border border-slate-200 p-6 rounded-2xl mb-8 font-mono text-xs text-slate-700">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 uppercase">Transaction ID</span>
+                  <span className="text-slate-800 font-bold">{paymentDetails?.paymentId}</span>
                 </div>
-                <div className="flex justify-between border-b border-white/5 pb-2">
-                  <span className="text-white/40 uppercase">Amount Paid</span>
-                  <span className="text-afterhours-green font-bold">₹{paymentDetails?.amountPaid}</span>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 uppercase">Amount Paid</span>
+                  <span className="text-green-600 font-bold">₹{paymentDetails?.amountPaid}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/40 uppercase">Registered Customer</span>
-                  <span className="text-white font-bold">{deliveryName}</span>
+                  <span className="text-slate-400 uppercase">Registered Customer</span>
+                  <span className="text-slate-800 font-bold">{deliveryName}</span>
                 </div>
               </div>
 
-              <p className="text-white/60 text-xs leading-relaxed max-w-md mx-auto mb-8">
-                Your setup is locked for <span className="text-white font-black">{startDate}</span> to <span className="text-white font-black">{endDate}</span>. Our concierge team has verified your delivery details and will contact you at <span className="text-afterhours-cyan font-bold">{deliveryPhone}</span> to coordinate delivery setup!
+              <p className="text-slate-650 text-xs leading-relaxed max-w-md mx-auto mb-8 font-medium">
+                Your setup is locked for <span className="text-[#003791] font-black">{startDate}</span> to <span className="text-[#003791] font-black">{endDate}</span>. Our concierge team has verified your delivery details and will contact you at <span className="text-slate-800 font-bold">{deliveryPhone}</span> to coordinate delivery setup!
               </p>
 
               <div className="flex justify-center gap-4">
                 <a
                   href="/index.html"
-                  className="bg-white/10 hover:bg-white/15 text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer inline-flex items-center"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-750 px-8 py-4 rounded-full font-bold uppercase tracking-widest text-xs border border-slate-200 transition-colors cursor-pointer inline-flex items-center"
                 >
                   Return to Home
                 </a>
@@ -1715,7 +1715,7 @@ Here are my remaining details for delivery:
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-afterhours-purple text-white px-8 py-4 rounded-full font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+                  className="bg-[#25D366] text-white px-8 py-4 rounded-full font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
                 >
                   Ping Concierge on WhatsApp
                 </a>

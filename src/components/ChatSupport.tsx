@@ -59,25 +59,25 @@ export function ChatSupport() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] bg-afterhours-gray border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex flex-col h-[500px]"
+            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] bg-white border border-slate-200 rounded-[32px] shadow-2xl overflow-hidden flex flex-col h-[500px]"
           >
             {/* Header */}
-            <div className="p-6 bg-afterhours-purple text-white flex items-center justify-between">
+            <div className="p-6 bg-[#003791] text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                   <MessageSquare size={20} />
                 </div>
                 <div>
-                  <h3 className="font-black uppercase italic text-sm">After Hours Support</h3>
+                  <h3 className="font-black uppercase italic text-sm text-white">After Hours Support</h3>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-afterhours-green rounded-full animate-pulse" />
-                    <span className="text-[10px] uppercase font-bold tracking-widest opacity-80">Online</span>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-blue-100 opacity-95">Online</span>
                   </div>
                 </div>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-white cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -86,7 +86,7 @@ export function ChatSupport() {
             {/* Messages */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide"
+              className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide bg-slate-50"
             >
               {messages.map((msg, i) => (
                 <div 
@@ -95,8 +95,8 @@ export function ChatSupport() {
                 >
                   <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
                     msg.role === "user" 
-                      ? "bg-afterhours-purple text-white rounded-tr-none" 
-                      : "bg-white/5 text-white/80 border border-white/5 rounded-tl-none"
+                      ? "bg-[#003791] text-white rounded-tr-none font-sans shadow-xs" 
+                      : "bg-white text-slate-800 border border-slate-200 rounded-tl-none font-sans shadow-xs"
                   }`}>
                     {msg.text}
                   </div>
@@ -104,15 +104,15 @@ export function ChatSupport() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none border border-white/5">
-                    <Loader2 size={16} className="animate-spin text-afterhours-purple" />
+                  <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-200 shadow-xs">
+                    <Loader2 size={16} className="animate-spin text-[#003791]" />
                   </div>
                 </div>
               )}
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/5 bg-afterhours-black/50">
+            <div className="p-4 border-t border-slate-200 bg-white">
               {/* Quick Replies */}
               {quickReplies.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -120,7 +120,7 @@ export function ChatSupport() {
                     <button
                       key={reply}
                       onClick={() => handleSend(reply)}
-                      className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-afterhours-cyan hover:bg-afterhours-cyan hover:text-black transition-all"
+                      className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold uppercase tracking-widest text-[#003791] hover:bg-blue-50 transition-all cursor-pointer font-sans"
                     >
                       {reply}
                     </button>
@@ -128,19 +128,19 @@ export function ChatSupport() {
                 </div>
               )}
               
-              <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10 focus-within:border-afterhours-purple transition-colors">
+              <div className="flex items-center gap-2 bg-slate-50 rounded-2xl p-2 border border-slate-200 focus-within:border-[#003791] focus-within:ring-1 focus-within:ring-[#003791]/20 transition-all">
                 <input 
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleSend()}
                   placeholder="Ask about packages, KYC, or booking..."
-                  className="flex-1 bg-transparent border-none focus:outline-none text-sm px-2 text-white placeholder:text-white/20"
+                  className="flex-1 bg-transparent border-none focus:outline-none text-sm px-2 text-slate-800 placeholder:text-slate-450 font-sans"
                 />
                 <button 
                   onClick={() => handleSend()}
                   disabled={isLoading || !input.trim()}
-                  className="w-10 h-10 rounded-xl bg-afterhours-purple text-white flex items-center justify-center hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                  className="w-10 h-10 rounded-xl bg-[#003791] text-white flex items-center justify-center hover:bg-blue-900 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <Send size={18} />
                 </button>
@@ -150,7 +150,7 @@ export function ChatSupport() {
                   href="https://wa.me/919711844884"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] uppercase font-black tracking-widest text-afterhours-cyan flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                  className="text-[10px] uppercase font-black tracking-widest text-[#003791] flex items-center gap-1.5 hover:text-blue-900 transition-colors font-mono"
                 >
                   <Phone size={10} /> Need immediate help? WhatsApp Us
                 </a>
@@ -164,8 +164,8 @@ export function ChatSupport() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
-          isOpen ? "bg-afterhours-gray text-white rotate-90" : "bg-afterhours-purple text-white neon-glow-purple"
+        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 cursor-pointer ${
+          isOpen ? "bg-slate-200 text-slate-800 rotate-90" : "bg-[#003791] text-white hover:bg-blue-900 shadow-md"
         }`}
       >
         {isOpen ? <X size={28} /> : <MessageSquare size={28} />}

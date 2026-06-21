@@ -14,7 +14,7 @@
 
 @layer base {
   body {
-    @apply bg-afterhours-black text-white antialiased;
+    @apply bg-slate-50 text-slate-800 antialiased;
     font-family: var(--font-sans);
   }
   
@@ -45,4 +45,114 @@
 /* Dark Mode Date Picker Indicator Fix */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(288deg) brightness(102%) contrast(102%);
+}
+
+/* Global Light Theme Override for Admin Dashboard */
+#admin-dashboard-view {
+  background-color: #f8fafc !important; /* slate-50 */
+  color: #1e293b !important; /* slate-800 */
+}
+
+/* Elevate all default afterhours dark-styled components inside the Admin view */
+#admin-dashboard-view .bg-neutral-900\/50,
+#admin-dashboard-view .bg-black\/40,
+#admin-dashboard-view .bg-[#0e0e11],
+#admin-dashboard-view .bg-black\/30,
+#admin-dashboard-view .bg-black\/20,
+#admin-dashboard-view .bg-black\/60,
+#admin-dashboard-view .bg-\[\#0a0a0c\]\/80,
+#admin-dashboard-view .bg-neutral-900\/40,
+#admin-dashboard-view .bg-slate-950,
+#admin-dashboard-view .bg-white\/5,
+#admin-dashboard-view .bg-\[\#121215\]\/80,
+#admin-dashboard-view .bg-neutral-950\/60,
+#admin-dashboard-view .bg-\[\#0a0f1d\],
+#admin-dashboard-view .glass-card,
+#admin-dashboard-view div[class*="bg-neutral-900"],
+#admin-dashboard-view div[class*="bg-black"],
+#admin-dashboard-view div[class*="bg-[#121215]"] {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important; /* slate-200 */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05) !important;
+}
+
+#admin-dashboard-view .border-white\/5,
+#admin-dashboard-view .border-white\/10,
+#admin-dashboard-view .border-white\/15,
+#admin-dashboard-view .border-white\/20,
+#admin-dashboard-view .border-dashed {
+  border-color: #e2e8f0 !important;
+}
+
+#admin-dashboard-view .text-white,
+#admin-dashboard-view .text-white\/90 {
+  color: #0f172a !important; /* slate-900 */
+}
+
+#admin-dashboard-view .text-white\/80,
+#admin-dashboard-view .text-white\/70,
+#admin-dashboard-view .text-white\/60,
+#admin-dashboard-view .text-white\/50,
+#admin-dashboard-view .text-white\/40,
+#admin-dashboard-view .text-white\/30 {
+  color: #475569 !important; /* slate-600 */
+}
+
+#admin-dashboard-view input,
+#admin-dashboard-view select,
+#admin-dashboard-view textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+#admin-dashboard-view input::placeholder,
+#admin-dashboard-view textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+#admin-dashboard-view input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none !important;
+}
+
+#admin-dashboard-view table th {
+  background-color: #f1f5f9 !important; /* slate-100 */
+  color: #475569 !important; /* slate-600 */
+  font-weight: 850 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+#admin-dashboard-view table td {
+  border-color: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+#admin-dashboard-view table tr:hover {
+  background-color: #f8fafc !important;
+}
+
+#admin-dashboard-view h2,
+#admin-dashboard-view h3,
+#admin-dashboard-view h4,
+#admin-dashboard-view h5 {
+  color: #0f172a !important; /* slate-900 */
+}
+
+#admin-dashboard-view button:not([class*="bg-[#003791]"]):not([id="admin-logout-btn"]):not([id="test-partner-login-btn"]) {
+  /* Give non-primary accent buttons a readable style */
+}
+
+/* Light theme support for modal dialog wrappers */
+.fixed.inset-0.z-50.flex.items-center.justify-center.p-4.bg-black\/90,
+.fixed.inset-0.z-50.flex.items-center.justify-center.p-4.bg-black\/95 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+div[class*="bg-[#0e0e11]"],
+div[class*="bg-[#0a0a0d]"] {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
 }

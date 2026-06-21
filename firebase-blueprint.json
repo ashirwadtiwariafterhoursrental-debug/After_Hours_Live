@@ -11,12 +11,184 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of post creation" }
       },
       "required": ["title", "content", "coverPhotoUrl", "createdAt"]
+    },
+    "user": {
+      "title": "User",
+      "description": "User profile with role details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "role": { "type": "string", "enum": ["user", "partner", "admin"], "description": "User account permission tier" },
+        "investedAmount": { "type": "number", "description": "Total initial capital contribution" },
+        "withdrawnFunds": { "type": "number", "description": "Total withdrawn earnings" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Profile setup timestamp" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "order": {
+      "title": "Order",
+      "description": "Rental reservations placed by customers",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string", "description": "Purchaser name" },
+        "customerEmail": { "type": "string", "description": "Purchaser email identifier" },
+        "paymentStatus": { "type": "string", "description": "Status of rental charge" },
+        "totalAmount": { "type": "number", "description": "Total checkout value" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order placement timestamp" }
+      },
+      "required": ["customerName", "customerEmail", "paymentStatus", "totalAmount"]
+    },
+    "homepage_slide": {
+      "title": "Homepage Slide",
+      "description": "Promotion slides featured on the landing carousel",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "imageUrl"]
+    },
+    "premium_game": {
+      "title": "Premium Game",
+      "description": "Catalogue of select video games available for hire",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "coverUrl"]
+    },
+    "inventory_waitlist": {
+      "title": "Inventory Waitlist",
+      "description": "Queue entry for desired rental slots",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "planDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "phone"]
+    },
+    "inventory_vault_item": {
+      "title": "Inventory Vault Category",
+      "description": "Groupings of hardware assets",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "totalOwned": { "type": "number" }
+      },
+      "required": ["name", "type"]
+    },
+    "inventory_vault_unit": {
+      "title": "Inventory Vault Unit",
+      "description": "Specific, trackable serial units of hardware assets",
+      "type": "object",
+      "properties": {
+        "serialNumber": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["serialNumber", "status"]
+    },
+    "inventory_vault_ledger": {
+      "title": "Inventory Ledger",
+      "description": "Transactional log tracking asset history",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["amount", "timestamp", "type"]
+    },
+    "site_image": {
+      "title": "Site Image",
+      "description": "Assets featured in custom gallery positions",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["url", "title"]
+    },
+    "gear_catalog_item": {
+      "title": "Gear Catalog Item",
+      "description": "Physical items from the hardware gears catalog",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "addon_media_item": {
+      "title": "Addon Media Item",
+      "description": "Creative or marketing extra media asset",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title"]
     }
   },
   "firestore": {
     "blogs/{blogId}": {
       "schema": "blog",
       "description": "Collection of public blog posts"
+    },
+    "users/{userId}": {
+      "schema": "user",
+      "description": "User master profiles"
+    },
+    "orders/{orderId}": {
+      "schema": "order",
+      "description": "Active rental orders"
+    },
+    "homepage_slides/{slideId}": {
+      "schema": "homepage_slide",
+      "description": "Active promotional slots"
+    },
+    "premium_games/{gameId}": {
+      "schema": "premium_game",
+      "description": "Available game catalog"
+    },
+    "inventory_waitlist/{waitlistId}": {
+      "schema": "inventory_waitlist",
+      "description": "Waiting queue database"
+    },
+    "inventory_vault/{vaultId}": {
+      "schema": "inventory_vault_item",
+      "description": "Hardware tracking folders"
+    },
+    "inventory_vault/{vaultId}/units/{unitId}": {
+      "schema": "inventory_vault_unit",
+      "description": "Serialised physical units"
+    },
+    "inventory_vault/{vaultId}/ledgers/{ledgerId}": {
+      "schema": "inventory_vault_ledger",
+      "description": "Serial tracking transaction registers"
+    },
+    "site_images/{imageId}": {
+      "schema": "site_image",
+      "description": "Custom user uploaded image maps"
+    },
+    "gear_catalog/{catalogId}": {
+      "schema": "gear_catalog_item",
+      "description": "Master rental core gears list"
+    },
+    "addon_media/{mediaId}": {
+      "schema": "addon_media_item",
+      "description": "Subscribed extras list"
     }
   }
 }

@@ -3,6 +3,7 @@
   "appId": "1:760486723974:web:07bf55f704bb4353656c07",
   "apiKey": "AIzaSyCys1GbAMQa8PkzjPHL0gZyphC7xlMkGb8",
   "authDomain": "graceful-yarn-gcf5x.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-0d7723a0-5f7a-4534-8a3f-c972699e768d",
   "storageBucket": "graceful-yarn-gcf5x.firebasestorage.app",
   "messagingSenderId": "760486723974",
   "measurementId": ""

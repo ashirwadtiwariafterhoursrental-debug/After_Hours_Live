@@ -3,23 +3,31 @@ import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDtgf0Jrwyk0AVXdEiuc9iC5XmtAcO3jHY",
-  authDomain: "afterhoursrental.in",
-  projectId: "afterhours-3704d",
-  storageBucket: "afterhours-3704d.firebasestorage.app",
-  messagingSenderId: "278513673850",
-  appId: "1:278513673850:web:89d899ab7480ed9cf6bdc3",
-  measurementId: "G-Y8STFTG2B8"
+import firebaseConfigJson from "../firebase-applet-config.json";
+
+// 1. Applet Config (Loaded dynamically from firebase-applet-config.json)
+export const firebaseConfig = {
+  apiKey: firebaseConfigJson.apiKey,
+  authDomain: firebaseConfigJson.authDomain,
+  projectId: firebaseConfigJson.projectId,
+  storageBucket: firebaseConfigJson.storageBucket,
+  messagingSenderId: firebaseConfigJson.messagingSenderId,
+  appId: firebaseConfigJson.appId,
+  measurementId: firebaseConfigJson.measurementId || ""
 };
 
+// 2. Initialize Firebase (Using the platform provisioned configurations)
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
-export const storage = getStorage(app);
 export const auth = getAuth(app);
 
+// 3. CRITICAL FIX: Force long-polling and connect to the correct custom Firestore database
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+}, firebaseConfigJson.firestoreDatabaseId);
+
+export const storage = getStorage(app);
+
+// 4. Error Handling Logic
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -66,4 +74,3 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
-

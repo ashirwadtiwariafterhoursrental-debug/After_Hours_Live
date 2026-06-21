@@ -796,7 +796,7 @@ export function Rentals() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="pt-32 pb-24 bg-afterhours-black min-h-screen text-white">
+    <div className="pt-32 pb-24 bg-slate-50 min-h-screen text-slate-800">
       <div className="container mx-auto px-6">
         
         {/* Hero Header */}
@@ -804,16 +804,16 @@ export function Rentals() {
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-8xl font-black uppercase italic mb-8 leading-none"
+            className="text-6xl md:text-8xl font-black uppercase italic mb-8 leading-none text-slate-800"
           >
-            Build Your <span className="text-afterhours-purple">Own</span> <br />
-            <span className="text-white">Setup.</span>
+            Build Your <span className="text-[#003791]">Own</span> <br />
+            <span className="text-slate-800">Setup.</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-white/60 text-xl md:text-2xl max-w-2xl leading-relaxed"
+            className="text-slate-600 text-xl md:text-2xl max-w-2xl leading-relaxed"
           >
             Premium tech delivered and installed. Choose a custom combo or rent individual gear for your next night in.
           </motion.p>
@@ -829,9 +829,9 @@ export function Rentals() {
         {/* Featured Combos */}
         <section className="mb-32">
           <div className="flex items-center gap-4 mb-12">
-            <div className="h-px flex-1 bg-white/10"></div>
-            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40">Featured Combos</h2>
-            <div className="h-px flex-1 bg-white/10"></div>
+            <div className="h-px flex-1 bg-slate-200"></div>
+            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Featured Combos</h2>
+            <div className="h-px flex-1 bg-slate-200"></div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -844,9 +844,9 @@ export function Rentals() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
                   viewport={{ once: true }}
-                  className="relative p-8 rounded-[2.5rem] bg-afterhours-charcoal border-2 border-afterhours-purple/20 hover:border-afterhours-purple transition-all group overflow-hidden neon-glow-purple"
+                  className="relative p-8 rounded-[2.5rem] bg-white shadow-sm border-2 border-slate-200 hover:border-[#003791] transition-all group overflow-hidden"
                 >
-                  <div className="aspect-video w-full bg-black/40 rounded-2xl mb-8 flex items-center justify-center p-12 text-afterhours-purple/40 group-hover:text-afterhours-purple transition-colors overflow-hidden relative">
+                  <div className="aspect-video w-full bg-slate-100/50 rounded-2xl mb-8 flex items-center justify-center p-12 text-[#003791]/30 group-hover:text-[#003791] transition-colors overflow-hidden relative border border-slate-100">
                     {dynamicGearMedia[combo.id] ? (
                       dynamicGearMedia[combo.id].mediaType === "video" ? (
                         <video src={dynamicGearMedia[combo.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
@@ -869,21 +869,21 @@ export function Rentals() {
                     )}
                   </div>
                   
-                  <h3 className="text-3xl font-black uppercase italic mb-2 leading-tight">{combo.name}</h3>
-                  <p className="text-2xl font-black mb-4 text-afterhours-purple">₹{combo.price}/day</p>
-                  <p className="text-white/50 text-sm mb-8 leading-relaxed h-12">{combo.desc}</p>
+                  <h3 className="text-3xl font-black uppercase italic mb-2 leading-tight text-slate-800">{combo.name}</h3>
+                  <p className="text-2xl font-black mb-4 text-[#003791]">₹{combo.price}/day</p>
+                  <p className="text-slate-500 text-sm mb-8 leading-relaxed h-12">{combo.desc}</p>
                   
                   {isWaitlistItem ? (
                     <button 
                       onClick={() => handlePhantomAddToCart(combo)}
-                      className="w-full py-4 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 border border-white/5 shadow-lg"
+                      className="w-full py-4 rounded-full bg-[#003791] text-white hover:bg-blue-800 font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-sm"
                     >
                       ADD TO CART ➔
                     </button>
                   ) : (
                     <button 
                       onClick={() => openSmartCartModal(combo)}
-                      className="w-full py-4 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                      className="w-full py-4 rounded-full bg-[#003791] text-white hover:bg-blue-800 font-bold uppercase tracking-widest text-xs transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-sm"
                     >
                       Add to Cart ➔
                     </button>
@@ -897,9 +897,9 @@ export function Rentals() {
         {/* Premium Gears */}
         <section className="mb-32">
           <div className="flex items-center gap-4 mb-12">
-            <div className="h-px flex-1 bg-white/10"></div>
-            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-white/40">Premium Gears</h2>
-            <div className="h-px flex-1 bg-white/10"></div>
+            <div className="h-px flex-1 bg-slate-200"></div>
+            <h2 className="text-xs font-bold uppercase tracking-[0.3em] text-slate-500">Premium Gears</h2>
+            <div className="h-px flex-1 bg-slate-200"></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -912,10 +912,10 @@ export function Rentals() {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   viewport={{ once: true }}
-                  className="p-6 rounded-3xl bg-afterhours-charcoal border border-white/5 hover:border-white/20 transition-all group lg:min-h-[350px] flex flex-col justify-between"
+                  className="p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-[#003791]/40 transition-all group lg:min-h-[350px] flex flex-col justify-between"
                 >
                   <div>
-                    <div className="aspect-square w-full bg-black/40 rounded-2xl mb-6 flex items-center justify-center p-10 text-afterhours-cyan/40 group-hover:text-afterhours-cyan transition-colors overflow-hidden relative">
+                    <div className="aspect-square w-full bg-slate-100/50 rounded-2xl mb-6 flex items-center justify-center p-10 text-[#003791]/30 group-hover:text-[#003791] transition-colors overflow-hidden relative border border-slate-100">
                       {dynamicGearMedia[item.id] ? (
                         dynamicGearMedia[item.id].mediaType === "video" ? (
                           <video src={dynamicGearMedia[item.id].mediaUrl} className="absolute inset-0 w-full h-full object-cover rounded-2xl" muted autoPlay loop playsInline />
@@ -938,22 +938,22 @@ export function Rentals() {
                       )}
                     </div>
 
-                    <h3 className="text-lg font-bold uppercase italic mb-1">{item.name}</h3>
-                    <p className="text-white/30 text-[10px] uppercase tracking-widest mb-4 h-8">{item.desc || "Premium Gear"}</p>
+                    <h3 className="text-lg font-bold uppercase italic mb-1 text-slate-800">{item.name}</h3>
+                    <p className="text-slate-500 text-[10px] uppercase tracking-widest mb-4 h-8">{item.desc || "Premium Gear"}</p>
                   </div>
                   <div className="flex items-center justify-between mt-auto pt-4 gap-2">
-                    <p className="text-afterhours-cyan font-black text-sm shrink-0">₹{item.price}/day</p>
+                    <p className="text-[#003791] font-black text-sm shrink-0">₹{item.price}/day</p>
                     {isWaitlistItem ? (
                       <button 
                         onClick={() => handlePhantomAddToCart(item)}
-                        className="px-4 py-2 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0 border border-white/5"
+                        className="px-4 py-2 rounded-full bg-[#003791] text-white hover:bg-blue-800 font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0 shadow-sm"
                       >
                         ADD TO CART
                       </button>
                     ) : (
                       <button 
                         onClick={() => openSmartCartModal(item)}
-                        className="px-4 py-2 rounded-full bg-[#90e0d0] text-black font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0"
+                        className="px-4 py-2 rounded-full bg-[#003791] text-white hover:bg-blue-800 font-bold uppercase tracking-widest text-[10px] transition-all hover:scale-105 active:scale-95 shrink-0 shadow-sm"
                       >
                         Add to Cart ➔
                       </button>
@@ -966,7 +966,7 @@ export function Rentals() {
         </section>
 
         {/* How it Works */}
-        <section className="mb-32 py-20 border-y border-white/5">
+        <section className="mb-32 py-20 border-y border-slate-200 bg-white shadow-sm rounded-3xl p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
               { title: "Select Gear", icon: <Package size={32} /> },
@@ -974,15 +974,15 @@ export function Rentals() {
               { title: "Doorstep Delivery & Setup", icon: <Truck size={32} /> }
             ].map((step, index) => (
               <div key={step.title} className="text-center group flex flex-col items-center">
-                <div className="w-20 h-20 mb-8 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-afterhours-cyan group-hover:scale-110 transition-transform duration-500">
+                <div className="w-20 h-20 mb-8 rounded-3xl bg-[#003791]/10 border border-[#003791]/20 flex items-center justify-center text-[#003791] group-hover:scale-110 transition-transform duration-500">
                   {step.icon}
                 </div>
-                <h4 className="text-lg font-black uppercase tracking-widest mb-2">
-                  <span className="text-white/20 mr-2">{index + 1}.</span>
+                <h4 className="text-lg font-black uppercase tracking-widest mb-2 text-slate-800">
+                  <span className="text-slate-400 mr-2">{index + 1}.</span>
                   {step.title}
                 </h4>
                 {step.description && (
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 max-w-[240px] mt-2 block leading-relaxed font-mono">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 max-w-[240px] mt-2 block leading-relaxed font-mono">
                     {step.description}
                   </p>
                 )}
@@ -993,43 +993,43 @@ export function Rentals() {
 
         {/* Lead Capture Form (Bottom Section) */}
         <section className="max-w-4xl mx-auto mt-32">
-          <div className="p-12 rounded-[3rem] bg-afterhours-charcoal border border-white/10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-afterhours-purple/10 blur-[100px] -mr-32 -mt-32"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-afterhours-cyan/10 blur-[100px] -ml-32 -mb-32"></div>
+          <div className="p-12 rounded-[3rem] bg-white rounded-xl shadow-sm border border-slate-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#003791]/5 blur-[100px] -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#003791]/5 blur-[100px] -ml-32 -mb-32"></div>
             
             <div className="relative z-10">
-              <h2 className="text-4xl font-black uppercase italic mb-4">Finalize Your Booking</h2>
-              <p className="text-white/50 mb-12">Verify ID to book with zero deposit. Our team will handle delivery & setup.</p>
+              <h2 className="text-4xl font-black uppercase italic mb-4 text-slate-800">Finalize Your Booking</h2>
+              <p className="text-slate-500 mb-12">Verify ID to book with zero deposit. Our team will handle delivery & setup.</p>
               
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-4">Full Name</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Full Name</label>
                     <input 
                       type="text" 
                       required
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
-                      className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-afterhours-purple transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl px-6 py-4 focus:outline-none focus:border-[#003791] transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-4">Phone Number</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Phone Number</label>
                     <input 
                       type="tel" 
                       required
                       placeholder="+91 97118 44884"
                       value={formData.phone}
                       onChange={e => setFormData({...formData, phone: e.target.value})}
-                      className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-afterhours-cyan transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-2xl px-6 py-4 focus:outline-none focus:border-[#003791] transition-all"
                     />
                   </div>
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full py-6 rounded-2xl bg-linear-to-r from-afterhours-purple to-afterhours-cyan text-black font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] transition-all active:scale-95 shadow-2xl"
+                  className="w-full py-6 rounded-2xl bg-[#003791] text-white hover:bg-blue-800 font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] transition-colors active:scale-95 shadow-sm"
                 >
                   Request Gear
                 </button>
@@ -1046,14 +1046,14 @@ export function Rentals() {
             initial={{ x: 400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 400, opacity: 0 }}
-            className="fixed top-0 right-0 h-screen w-full md:w-[450px] bg-afterhours-charcoal border-l border-white/10 z-50 shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 h-screen w-full md:w-[450px] bg-white border-l border-slate-200 z-50 shadow-2xl flex flex-col"
           >
-            <div className="p-8 border-b border-white/10 flex items-center justify-between">
+            <div className="p-8 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <ShoppingCart className="text-afterhours-purple" />
-                <h2 className="text-2xl font-black uppercase italic">Your Setup</h2>
+                <ShoppingCart className="text-[#003791]" />
+                <h2 className="text-2xl font-black uppercase italic text-slate-800">Your Setup</h2>
               </div>
-              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600">
                 <X size={24} />
               </button>
             </div>
@@ -1061,30 +1061,30 @@ export function Rentals() {
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
               {/* Date Selection */}
               <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
                   <Calendar size={14} /> Rental Period
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase text-white/30 ml-2">Rental Start Date</label>
+                    <label className="text-[9px] uppercase text-slate-500 ml-2">Rental Start Date</label>
                     <input 
                       type="date" 
                       min={today}
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       onKeyDown={(e) => e.preventDefault()}
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-afterhours-purple transition-colors cursor-pointer"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#003791] transition-colors cursor-pointer"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase text-white/30 ml-2">Rental End Date</label>
+                    <label className="text-[9px] uppercase text-slate-500 ml-2">Rental End Date</label>
                     <input 
                       type="date" 
                       min={startDate || today}
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       onKeyDown={(e) => e.preventDefault()}
-                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-afterhours-cyan transition-colors cursor-pointer"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#003791] transition-colors cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1092,24 +1092,24 @@ export function Rentals() {
 
               {/* Cart Items */}
               <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Selected Gear</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Selected Gear</h3>
                 {cart.length === 0 ? (
-                  <p className="text-white/20 italic text-sm py-8 text-center border border-dashed border-white/10 rounded-2xl">Your cart is empty</p>
+                  <p className="text-slate-500 italic text-sm py-8 text-center border border-dashed border-slate-200 rounded-2xl">Your cart is empty</p>
                 ) : (
                   <div className="space-y-4">
                     {cart.map(item => (
-                      <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-black/30 border border-white/5">
-                        <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
+                      <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-[#003791]">
                           {item.icon}
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-bold uppercase italic">{item.name}</h4>
-                          <p className="text-xs text-white/40">₹{calculateItemPriceForDates(item.price, startDate, endDate)} total</p>
+                          <h4 className="text-sm font-bold uppercase italic text-slate-800">{item.name}</h4>
+                          <p className="text-xs text-slate-500">₹{calculateItemPriceForDates(item.price, startDate, endDate)} total</p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:text-afterhours-purple transition-colors"><Minus size={14} /></button>
-                          <span className="text-sm font-bold">{item.quantity}</span>
-                          <button onClick={() => addToCart(item)} className="p-1 hover:text-afterhours-cyan transition-colors"><Plus size={14} /></button>
+                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:text-[#003791] text-slate-500 transition-colors"><Minus size={14} /></button>
+                          <span className="text-sm font-bold text-slate-800">{item.quantity}</span>
+                          <button onClick={() => addToCart(item)} className="p-1 hover:text-[#003791] text-slate-500 transition-colors"><Plus size={14} /></button>
                         </div>
                       </div>
                     ))}
@@ -1119,7 +1119,7 @@ export function Rentals() {
 
               {/* Promo Codes */}
               <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2">
                   <Tag size={14} /> Promo Code
                 </h3>
                 <div className="flex gap-2">
@@ -1132,13 +1132,13 @@ export function Rentals() {
                       setPromoError("");
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && applyPromoCode()}
-                    className={`flex-1 bg-black/50 border rounded-xl px-4 py-3 text-sm focus:outline-none transition-colors uppercase ${
-                      promoError ? 'border-red-500' : 'border-white/10 focus:border-afterhours-purple'
+                    className={`flex-1 bg-slate-50 border rounded-xl px-4 py-3 text-sm focus:outline-none text-slate-800 transition-colors uppercase ${
+                      promoError ? 'border-red-500' : 'border-slate-200 focus:border-[#003791]'
                     }`}
                   />
                   <button 
                     onClick={applyPromoCode}
-                    className="px-6 rounded-xl bg-white/10 hover:bg-white/20 font-bold uppercase text-[10px] transition-colors"
+                    className="px-6 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 font-bold uppercase text-[10px] transition-colors"
                   >
                     Apply
                   </button>
@@ -1150,7 +1150,7 @@ export function Rentals() {
                 )}
                 <div className="flex flex-wrap gap-2">
                   {activeCodes.map(code => (
-                    <div key={code} className="flex items-center gap-2 px-3 py-1 bg-afterhours-purple/20 text-afterhours-purple rounded-full text-[10px] font-bold border border-afterhours-purple/30">
+                    <div key={code} className="flex items-center gap-2 px-3 py-1 bg-[#003791]/10 text-[#003791] rounded-full text-[10px] font-bold border border-[#003791]/20">
                       {code}
                       <button onClick={() => removeCode(code)}><X size={12} /></button>
                     </div>
@@ -1160,30 +1160,30 @@ export function Rentals() {
             </div>
 
             {/* Summary Footer */}
-            <div className="p-8 bg-black/40 border-t border-white/10 space-y-4">
+            <div className="p-8 bg-slate-50 border-t border-slate-200 space-y-4">
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-white/40">
+                <div className="flex justify-between text-slate-500">
                   <span>Subtotal</span>
-                  <span>₹{subtotal}</span>
+                  <span className="text-slate-855 font-semibold">₹{subtotal}</span>
                 </div>
-                <div className="flex justify-between text-white/40">
+                <div className="flex justify-between text-slate-500">
                   <span>Delivery Fee</span>
-                  <span>₹{deliveryFee}</span>
+                  <span className="text-slate-855 font-semibold">₹{deliveryFee}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-afterhours-cyan font-bold">
+                  <div className="flex justify-between text-emerald-600 font-bold">
                     <span>{activeOverrideCode ? "VIP Discount Applied" : "Discount"}</span>
                     <span>-₹{discount}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xl font-black uppercase italic pt-4 border-t border-white/10">
+                <div className="flex justify-between text-xl font-black uppercase italic pt-4 border-t border-slate-200 text-slate-800">
                   <span>Final Total</span>
-                  <span className="text-afterhours-cyan">₹{finalTotal}</span>
+                  <span className="text-[#003791]">₹{finalTotal}</span>
                 </div>
               </div>
 
               {!isCartStillAvailable && (
-                <div className="flex items-start gap-2 p-4 bg-red-950/30 border border-red-500/30 rounded-xl text-red-400 text-xs font-mono">
+                <div className="flex items-start gap-2 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-mono">
                   <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                   <span>Selected setup is Out of Stock / exceeds capacity limit on these dates. Please edit dates or gear.</span>
                 </div>
@@ -1193,7 +1193,7 @@ export function Rentals() {
                 id="rentals-proceed-checkout-btn"
                 disabled={cart.length === 0 || !startDate || !endDate || !isCartStillAvailable}
                 onClick={handleCheckoutRedirect}
-                className="w-full py-5 rounded-2xl bg-linear-to-r from-afterhours-purple to-afterhours-cyan text-black font-black uppercase tracking-[0.2em] text-sm disabled:opacity-50 disabled:grayscale transition-all hover:scale-[1.02] active:scale-95 shadow-2xl"
+                className="w-full py-5 rounded-2xl bg-[#003791] text-white hover:bg-blue-800 font-black uppercase tracking-[0.2em] text-sm disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
               >
                 Proceed to Checkout
               </button>
@@ -1207,12 +1207,12 @@ export function Rentals() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-afterhours-purple text-black shadow-2xl flex items-center justify-center z-40 md:hidden"
+        className="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-[#003791] text-white shadow-2xl flex items-center justify-center z-40 md:hidden"
       >
         <div className="relative">
           <ShoppingCart size={24} />
           {cart.length > 0 && (
-            <span className="absolute -top-2 -right-2 w-5 h-5 bg-afterhours-cyan rounded-full text-[10px] font-black flex items-center justify-center border-2 border-afterhours-purple">
+            <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#003791] text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white">
               {cart.reduce((a, b) => a + b.quantity, 0)}
             </span>
           )}
@@ -1229,7 +1229,7 @@ export function Rentals() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsWaitlistOpen(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
             />
 
             {/* Modal Body card */}
@@ -1237,23 +1237,22 @@ export function Rentals() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg bg-[#121214] border border-afterhours-pink/30 rounded-[2.5rem] p-8 md:p-10 shadow-[0_0_50px_rgba(236,72,153,0.15)] overflow-hidden z-10"
+              className="relative w-full max-w-lg bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-10 shadow-lg overflow-hidden z-10"
             >
-              {/* Pink spotlight ambient glow */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-afterhours-pink/10 blur-[60px] pointer-events-none rounded-full" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#003791]/5 blur-[60px] pointer-events-none rounded-full" />
               
               <div className="relative flex justify-between items-start mb-6">
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-afterhours-pink px-2.5 py-1 rounded-full bg-afterhours-pink/10 border border-afterhours-pink/20 mb-2.5 inline-block">
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#003791] px-2.5 py-1 rounded-full bg-[#003791]/10 border border-[#003791]/20 mb-2.5 inline-block">
                     ⚡ Demand High / Waitlist Active
                   </span>
-                  <h3 className="text-2xl font-black uppercase italic text-white flex items-center gap-2">
+                  <h3 className="text-2xl font-black uppercase italic text-slate-800 flex items-center gap-2">
                     Queue: {waitlistItem.name}
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsWaitlistOpen(false)}
-                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -1261,69 +1260,69 @@ export function Rentals() {
 
               {waitlistSuccess ? (
                 <div className="space-y-6 text-center py-6">
-                  <div className="w-16 h-16 bg-afterhours-green/15 border border-afterhours-green text-afterhours-green rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                  <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-sm">
                     ✓
                   </div>
                   <div className="space-y-2">
-                    <h4 className="text-lg font-black uppercase italic text-white">Signed up to Shadow Queue!</h4>
-                    <p className="text-xs text-white/60 leading-relaxed max-w-sm mx-auto">
-                      We've reserved your priority spot in the waitlist for <span className="text-afterhours-pink font-bold">{waitlistItem.name}</span>. Our concierge team will ping you via WhatsApp or Email as soon as this setup clears out from rent!
+                    <h4 className="text-lg font-black uppercase italic text-slate-800">Signed up to Shadow Queue!</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
+                      We've reserved your priority spot in the waitlist for <span className="text-[#003791] font-bold">{waitlistItem.name}</span>. Our concierge team will ping you via WhatsApp or Email as soon as this setup clears out from rent!
                     </p>
                   </div>
                   <button
                     onClick={() => setIsWaitlistOpen(false)}
-                    className="w-full py-4 rounded-xl bg-white text-black font-black uppercase tracking-widest text-xs transition-transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                    className="w-full py-4 rounded-xl bg-[#003791] text-white hover:bg-blue-800 font-black uppercase tracking-widest text-xs transition-transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer shadow-sm"
                   >
                     Return to Catalog
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleWaitlistSubmit} className="space-y-6">
-                  <p className="text-xs text-white/50 leading-relaxed font-sans">
+                  <p className="text-xs text-slate-500 leading-relaxed font-sans">
                     Please submit your interest so we can notify you with a better offer.
                   </p>
 
                   {waitlistError && (
-                    <div className="p-4 bg-red-950/40 border border-red-500/20 rounded-2xl flex items-start gap-3">
-                      <AlertTriangle className="text-rose-450 mt-0.5" size={14} />
-                      <p className="text-xs text-rose-350 font-mono">{waitlistError}</p>
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
+                      <AlertTriangle className="text-rose-600 mt-0.5" size={14} />
+                      <p className="text-xs text-rose-600 font-mono">{waitlistError}</p>
                     </div>
                   )}
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Your Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 block ml-1">Your Name</label>
                       <input
                         type="text"
                         required
                         placeholder="e.g. Rachel Green"
                         value={waitlistName}
                         onChange={(e) => setWaitlistError("") || setWaitlistName(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white focus:outline-none focus:border-afterhours-pink transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#003791] transition-all"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">Phone / Email Address</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 block ml-1">Phone / Email Address</label>
                       <input
                         type="text"
                         required
                         placeholder="e.g. +91 98123 45678 or rachel@gmail.com"
                         value={waitlistContact}
                         onChange={(e) => setWaitlistContact(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white focus:outline-none focus:border-afterhours-pink transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#003791] transition-all"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block ml-1">When were you planning to rent this?</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 block ml-1">When were you planning to rent this?</label>
                       <input
                         type="date"
                         required
                         min={today}
                         value={waitlistDate}
                         onChange={(e) => setWaitlistDate(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-mono text-white/80 focus:outline-none focus:border-afterhours-pink transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#003791] transition-all"
                       />
                     </div>
                   </div>
@@ -1331,12 +1330,12 @@ export function Rentals() {
                   <button
                     type="submit"
                     disabled={isWaitlistSubmitting}
-                    className="w-full py-4.5 bg-gradient-to-r from-afterhours-pink to-afterhours-purple text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-lg shadow-afterhours-pink/15 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-55 cursor-pointer"
+                    className="w-full py-4.5 bg-[#003791] hover:bg-blue-800 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-sm disabled:opacity-55 cursor-pointer"
                   >
                     {isWaitlistSubmitting ? (
                       <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="animate-spin" size={14} />
-                        <span>Reserving shadow slot...</span>
+                        <Loader2 className="animate-spin text-white" size={14} />
+                        <span className="text-white">Reserving shadow slot...</span>
                       </span>
                     ) : (
                       "Join shadow queue ➔"
@@ -1359,7 +1358,7 @@ export function Rentals() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSmartCartOpen(false)}
-              className="absolute inset-0 bg-black/85 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
             />
 
             {/* Modal Body card */}
@@ -1367,32 +1366,31 @@ export function Rentals() {
               initial={{ opacity: 0, scale: 0.92, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 15 }}
-              className="relative w-full max-w-2xl bg-[#0e0e10] border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-y-auto max-h-[90vh] z-10"
+              className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-y-auto max-h-[90vh] z-10"
             >
-              {/* Cyan visual glow */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-afterhours-cyan/5 blur-[80px] pointer-events-none rounded-full" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#003791]/5 blur-[80px] pointer-events-none rounded-full" />
               
-              <div className="relative flex justify-between items-start mb-6 border-b border-white/5 pb-4">
+              <div className="relative flex justify-between items-start mb-6 border-b border-slate-200 pb-4">
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.25em] text-afterhours-cyan mb-1 inline-block">
+                  <span className="text-[9px] font-black uppercase tracking-[0.25em] text-[#003791] mb-1 inline-block">
                     Interactive Set Configuration
                   </span>
-                  <h3 className="text-3xl font-black uppercase italic text-white leading-none">
+                  <h3 className="text-3xl font-black uppercase italic text-slate-800 leading-none">
                     Configure {smartCartItem.id === "hw-ps5" && isComboConverted ? "Gaming Theatre Combo" : smartCartItem.name}
                   </h3>
                 </div>
                 <button
                   onClick={() => setIsSmartCartOpen(false)}
-                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Core Item Inclusions list */}
-              <div className="space-y-3 mb-6 bg-white/[0.02] border border-white/5 rounded-2xl p-5">
-                <h4 className="text-[10px] font-black uppercase tracking-wider text-white/50">Base Package Inclusions:</h4>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/80">
+              <div className="space-y-3 mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500">Base Package Inclusions:</h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
                   {(
                     (smartCartItem.id === "hw-ps5" && isComboConverted 
                       ? ["Sony PS5 Console", "2x DualSense Wireless Controllers", "Full HD 1080p Cinema Projector", "All HDMI & Power Cabling"]
@@ -1409,7 +1407,7 @@ export function Rentals() {
                     ) || ["High Quality Premium Hardware Gear Rig", "Necessary cabling and standard setup manual"]
                   ).map((inc, i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <span className="text-afterhours-cyan text-sm">✦</span>
+                      <span className="text-[#003791] text-sm">✦</span>
                       <span>{inc}</span>
                     </li>
                   ))}
@@ -1422,8 +1420,8 @@ export function Rentals() {
                   smartCartItem.id.toLowerCase().includes("racing") ||
                   smartCartItem.name.toLowerCase().includes("ps5") ||
                   smartCartItem.name.toLowerCase().includes("projector")) && (
-                  <div className="mt-4 p-3.5 bg-afterhours-cyan/10 border border-afterhours-cyan/25 rounded-xl text-[11px] font-bold text-afterhours-cyan leading-relaxed flex items-center gap-2">
-                    <ShieldCheck size={14} className="shrink-0" />
+                  <div className="mt-4 p-3.5 bg-[#003791]/5 border border-[#003791]/10 rounded-xl text-[11px] font-bold text-[#003791] leading-relaxed flex items-center gap-2">
+                    <ShieldCheck size={14} className="shrink-0 text-[#003791]" />
                     <span>⚠️ High-Speed Wi-Fi required for PS Deluxe Game Library and Multiplayer.</span>
                   </div>
                 )}
@@ -1431,7 +1429,7 @@ export function Rentals() {
 
               {/* Enhance Your Setup Section */}
               <div className="space-y-4 mb-6 text-left">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Enhance Your Experience</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Enhance Your Experience</h4>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Extra Controllers Addon Option */}
@@ -1440,31 +1438,31 @@ export function Rentals() {
                       onClick={() => setAddExtraController(!addExtraController)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
                         addExtraController
-                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791]/40 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Gamepad2 size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Extra Controller</h5>
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 whitespace-normal break-words flex-1">Extra Controller</h5>
                             <input
                               type="checkbox"
                               checked={addExtraController}
                               onChange={() => {}}
-                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
                           <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs text-white/40 line-through font-bold">₹599</span>
-                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                            <span className="text-xs text-slate-400 line-through font-bold">₹599</span>
+                            <span className="text-xl sm:text-2xl text-[#003791] font-black tracking-tight">
                               ₹{isThresholdReached ? 249 : 299}/day
                             </span>
                           </div>
-                          <p className="text-[9px] text-white/50 mt-1 leading-normal">DualSense controller with haptic feedback</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal">DualSense controller with haptic feedback</p>
                         </div>
                       </div>
                       
@@ -1479,31 +1477,31 @@ export function Rentals() {
                       onClick={() => setAddProjectorScreen(!addProjectorScreen)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
                         addProjectorScreen
-                          ? "bg-afterhours-cyan/15 border-afterhours-cyan/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791]/40 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Monitor size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Projector Screen</h5>
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 whitespace-normal break-words flex-1">Projector Screen</h5>
                             <input
                               type="checkbox"
                               checked={addProjectorScreen}
                               onChange={() => {}}
-                              className="rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
                           <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
-                            <span className="text-xl sm:text-2xl text-[#90e0d0] font-black tracking-tight">
+                            <span className="text-xs text-slate-400 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#003791] font-black tracking-tight">
                               ₹{isThresholdReached ? 149 : 199}/day
                             </span>
                           </div>
-                          <p className="text-[9px] text-white/50 mt-1 leading-normal">High contrast 75-inch portable Projector Screen</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal">High contrast 75-inch portable Projector Screen</p>
                         </div>
                       </div>
 
@@ -1518,31 +1516,31 @@ export function Rentals() {
                       onClick={() => setAddHeavyDutyTripod(!addHeavyDutyTripod)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
                         addHeavyDutyTripod
-                          ? "bg-afterhours-cyan/15 border-afterhours-cyan/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791]/40 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Maximize size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Heavy Duty Tripod</h5>
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 whitespace-normal break-words flex-1">Heavy Duty Tripod</h5>
                             <input
                               type="checkbox"
                               checked={addHeavyDutyTripod}
                               onChange={() => {}}
-                              className="rounded border-white/20 text-afterhours-cyan focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
                           <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
-                            <span className="text-xl sm:text-2xl text-[#90e0d0] font-black tracking-tight">
+                            <span className="text-xs text-slate-400 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#003791] font-black tracking-tight">
                               ₹{isThresholdReached ? 149 : 199}/day
                             </span>
                           </div>
-                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Ultra sturdy camera/projector telescoping stand</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal">Ultra sturdy camera/projector telescoping stand</p>
                         </div>
                       </div>
 
@@ -1557,31 +1555,31 @@ export function Rentals() {
                       onClick={() => setAddWirelessMic(!addWirelessMic)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
                         addWirelessMic
-                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791]/40 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Mic size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Wireless Mic</h5>
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 whitespace-normal break-words flex-1">Wireless Mic</h5>
                             <input
                               type="checkbox"
                               checked={addWirelessMic}
                               onChange={() => {}}
-                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
                           <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
-                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                            <span className="text-xs text-slate-400 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#003791] font-black tracking-tight">
                               ₹{isThresholdReached ? 199 : 299}/day
                             </span>
                           </div>
-                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Professional vocal wireless microphone unit</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal">Professional vocal wireless microphone unit</p>
                         </div>
                       </div>
 
@@ -1596,31 +1594,31 @@ export function Rentals() {
                       onClick={() => setAddMetaShotsBat(!addMetaShotsBat)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-4 ${
                         addMetaShotsBat
-                          ? "bg-afterhours-purple/15 border-afterhours-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791]/40 shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
                       <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Zap size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white whitespace-normal break-words flex-1">Meta Shots Bat</h5>
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800 whitespace-normal break-words flex-1">Meta Shots Bat</h5>
                             <input
                               type="checkbox"
                               checked={addMetaShotsBat}
                               onChange={() => {}}
-                              className="rounded border-white/20 text-afterhours-purple focus:ring-0 focus:ring-offset-0 bg-black/45 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
                           <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-xs text-white/40 line-through font-bold">₹499</span>
-                            <span className="text-xl sm:text-2xl text-afterhours-purple font-black tracking-tight">
+                            <span className="text-xs text-slate-400 line-through font-bold">₹499</span>
+                            <span className="text-xl sm:text-2xl text-[#003791] font-black tracking-tight">
                               ₹{isThresholdReached ? 199 : 299}/day
                             </span>
                           </div>
-                          <p className="text-[9px] text-white/50 mt-1 leading-normal">Premium VR physical cricket bat accessory</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal">Premium VR physical cricket bat accessory</p>
                         </div>
                       </div>
 
@@ -1635,18 +1633,18 @@ export function Rentals() {
                       onClick={() => setIsComboConverted(!isComboConverted)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
                         isComboConverted
-                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791] shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
-                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                         <Zap size={18} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add cinema Projector Combo</h5>
-                            <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800">Smart Upsell: Add cinema Projector Combo</h5>
+                            <span className="text-[8px] font-black uppercase bg-[#003791] text-white px-2 py-0.5 rounded-full inline-block shrink-0">
                               Save ₹399/day
                             </span>
                           </div>
@@ -1654,11 +1652,11 @@ export function Rentals() {
                             type="checkbox"
                             checked={isComboConverted}
                             onChange={() => {}}
-                            className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                            className="rounded border-slate-300 text-[#003791] bg-white focus:ring-0 cursor-pointer pointer-events-none shrink-0"
                           />
                         </div>
-                        <p className="text-[10px] text-white/60 leading-normal mt-1">
-                          Converts standalone JBL Speaker and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Full Party Setup Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1799/day</span> overall.
+                        <p className="text-[10px] text-slate-600 leading-normal mt-1">
+                          Converts standalone JBL Speaker and Projector setup into our cohesive, premium <span className="text-[#003791] font-bold">Full Party Setup Combo</span> for just <span className="text-[#003791] font-black text-xs">₹1799/day</span> overall.
                         </p>
                       </div>
                     </div>
@@ -1670,18 +1668,18 @@ export function Rentals() {
                       onClick={() => setIsComboConverted(!isComboConverted)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
                         isComboConverted
-                          ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-[#003791]/10 border-[#003791] shadow-sm"
+                          : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                       }`}
                     >
-                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                      <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                         <Zap size={18} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add cinema Projector Combo</h5>
-                            <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                            <h5 className="text-xs font-black uppercase tracking-wider text-slate-800">Smart Upsell: Add cinema Projector Combo</h5>
+                            <span className="text-[8px] font-black uppercase bg-[#003791] text-white px-2 py-0.5 rounded-full inline-block shrink-0">
                               Save ₹299/day
                             </span>
                           </div>
@@ -1689,11 +1687,11 @@ export function Rentals() {
                             type="checkbox"
                             checked={isComboConverted}
                             onChange={() => {}}
-                            className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                            className="rounded border-slate-300 text-[#003791] bg-white focus:ring-0 cursor-pointer pointer-events-none shrink-0"
                           />
                         </div>
-                        <p className="text-[10px] text-white/60 leading-normal mt-1">
-                          Converts standalone PS5 and Projector setup into our cohesive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1999/day</span> overall.
+                        <p className="text-[10px] text-slate-600 leading-normal mt-1">
+                          Converts standalone PS5 and Projector setup into our cohesive, premium <span className="text-[#003791] font-bold">Gaming Theatre Combo</span> for just <span className="text-[#003791] font-black text-xs">₹1999/day</span> overall.
                         </p>
                       </div>
                     </div>
@@ -1709,18 +1707,18 @@ export function Rentals() {
                         }}
                         className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
                           isComboConverted
-                            ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                            ? "bg-[#003791]/10 border-[#003791] shadow-sm"
+                            : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                         }`}
                       >
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Zap size={18} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add PS5 Combo</h5>
-                              <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-slate-800">Smart Upsell: Add PS5 Combo</h5>
+                              <span className="text-[8px] font-black uppercase bg-[#003791] text-white px-2 py-0.5 rounded-full inline-block shrink-0">
                                 Save ₹299/day
                               </span>
                             </div>
@@ -1728,11 +1726,11 @@ export function Rentals() {
                               type="checkbox"
                               checked={isComboConverted}
                               onChange={() => {}}
-                              className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] bg-white focus:ring-0 cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
-                          <p className="text-[10px] text-white/60 leading-normal mt-1">
-                            Converts standalone Projector setup and PS5 into our immersive, premium <span className="text-afterhours-cyan font-bold">Gaming Theatre Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1999/day</span> overall.
+                          <p className="text-[10px] text-slate-600 leading-normal mt-1">
+                            Converts standalone Projector setup and PS5 into our immersive, premium <span className="text-[#003791] font-bold">Gaming Theatre Combo</span> for just <span className="text-[#003791] font-black text-xs">₹1999/day</span> overall.
                           </p>
                         </div>
                       </div>
@@ -1744,18 +1742,18 @@ export function Rentals() {
                         }}
                         className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-4 col-span-1 sm:col-span-2 ${
                           isComboConverted2
-                            ? "bg-gradient-to-r from-afterhours-cyan/10 via-afterhours-purple/10 to-afterhours-pink/10 border-afterhours-cyan shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                            : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                            ? "bg-[#003791]/10 border-[#003791] shadow-sm"
+                            : "bg-slate-50 border-slate-200 hover:border-[#003791]/20"
                         }`}
                       >
-                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-afterhours-cyan/10 border border-afterhours-cyan/20 text-afterhours-cyan">
+                        <div className="flex-shrink-0 mt-0.5 flex items-center justify-center p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                           <Zap size={18} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h5 className="text-xs font-black uppercase tracking-wider text-white">Smart Upsell: Add JBL Speaker Combo</h5>
-                              <span className="text-[8px] font-black uppercase bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black px-2 py-0.5 rounded-full inline-block shrink-0">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-slate-800">Smart Upsell: Add JBL Speaker Combo</h5>
+                              <span className="text-[8px] font-black uppercase bg-[#003791] text-white px-2 py-0.5 rounded-full inline-block shrink-0">
                                 Save ₹399/day
                               </span>
                             </div>
@@ -1763,11 +1761,11 @@ export function Rentals() {
                               type="checkbox"
                               checked={isComboConverted2}
                               onChange={() => {}}
-                              className="rounded border-cyan-400 text-afterhours-cyan bg-black focus:ring-0 cursor-pointer pointer-events-none shrink-0"
+                              className="rounded border-slate-300 text-[#003791] bg-white focus:ring-0 cursor-pointer pointer-events-none shrink-0"
                             />
                           </div>
-                          <p className="text-[10px] text-white/60 leading-normal mt-1">
-                            Converts standalone Projector and Speaker setup into <span className="text-afterhours-cyan font-bold">Full Party Setup Combo</span> for just <span className="text-afterhours-cyan font-black text-xs">₹1799/day</span> overall.
+                          <p className="text-[10px] text-slate-600 leading-normal mt-1">
+                            Converts standalone Projector and Speaker setup into <span className="text-[#003791] font-bold">Full Party Setup Combo</span> for just <span className="text-[#003791] font-black text-xs">₹1799/day</span> overall.
                           </p>
                         </div>
                       </div>
@@ -1779,23 +1777,23 @@ export function Rentals() {
               {/* Dynamic Game Pricing Block */}
               {(smartCartItem.id === "hw-ps5" || smartCartItem.id === "combo-theatre") && (
                 <div className="space-y-4 mb-8 text-left">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-afterhours-purple/10 border border-afterhours-purple/20 text-afterhours-purple">
+                      <div className="p-2 rounded-xl bg-[#003791]/10 border border-[#003791]/20 text-[#003791]">
                         <Disc size={18} />
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-[0.15em] text-white">Bundle Unlock: Choose Premium Games</h4>
+                      <h4 className="text-xs font-black uppercase tracking-[0.15em] text-slate-800">Bundle Unlock: Choose Premium Games</h4>
                     </div>
                     <div className="flex items-center gap-3 font-sans">
-                      <span className="text-[10px] text-white/40 uppercase font-bold tracking-wider">Promo price:</span>
-                      <span className="text-xs text-white/40 line-through font-bold">₹499</span>
-                      <span className="text-base sm:text-lg text-afterhours-cyan font-black">₹{isThresholdReached ? 149 : 199}/day</span>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Promo price:</span>
+                      <span className="text-xs text-slate-400 line-through font-bold">₹499</span>
+                      <span className="text-base sm:text-lg text-[#003791] font-black">₹{isThresholdReached ? 149 : 199}/day</span>
                     </div>
                   </div>
 
                 {/* fetched games rendering */}
                 {premiumGames.length === 0 ? (
-                  <p className="text-[11px] text-white/45 italic pl-1 font-mono">No premium catalog games registered in system.</p>
+                  <p className="text-[11px] text-slate-500 italic pl-1 font-mono">No premium catalog games registered in system.</p>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {premiumGames.map((game) => {
@@ -1812,23 +1810,23 @@ export function Rentals() {
                           }}
                           className={`group p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between text-left select-none ${
                             isSelected
-                              ? "bg-afterhours-purple/10 border-afterhours-purple/50"
-                              : "bg-white/[0.01] border-white/5 hover:border-white/10"
+                              ? "bg-[#003791]/10 border-[#003791]/50"
+                              : "bg-slate-50 border-slate-200 hover:border-slate-300"
                           }`}
                         >
-                          <div className="aspect-[3/4] w-full bg-black/60 rounded-lg overflow-hidden mb-2 relative">
+                          <div className="aspect-[3/4] w-full bg-slate-200 rounded-lg overflow-hidden mb-2 relative">
                             <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
                             {isSelected && (
-                              <div className="absolute inset-0 bg-afterhours-purple/20 flex items-center justify-center backdrop-blur-[1px]">
-                                <span className="bg-afterhours-purple border border-white/20 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full scale-100 transition-transform">✓ Selected</span>
+                              <div className="absolute inset-0 bg-[#003791]/10 flex items-center justify-center backdrop-blur-[1px]">
+                                <span className="bg-[#003791] border border-white/25 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full scale-100 transition-transform">✓ Selected</span>
                               </div>
                             )}
                           </div>
                           
-                          <h5 className="text-[10px] font-black text-white/90 uppercase tracking-widest line-clamp-1 truncate">{game.title}</h5>
+                          <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest line-clamp-1 truncate">{game.title}</h5>
                           <div className="flex items-center gap-1.5 mt-1">
-                            <span className="text-[8px] text-white/30 line-through">~~₹499~~</span>
-                            <span className="text-[9px] text-afterhours-purple font-bold">₹{isThresholdReached ? 149 : 199}/day</span>
+                            <span className="text-[8px] text-slate-400 line-through">~~₹499~~</span>
+                            <span className="text-[9px] text-[#003791] font-bold">₹{isThresholdReached ? 149 : 199}/day</span>
                           </div>
                         </div>
                       );
@@ -1839,7 +1837,7 @@ export function Rentals() {
             )}
 
                 {/* Progress bar and Target calculation logic */}
-                <div className="space-y-3 bg-white/[0.02] border border-white/5 rounded-2xl p-5 mt-4">
+                <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-5 mt-4">
                   <div className="flex justify-between text-xs font-black uppercase italic">
                     <span>Prospective Cart Total:</span>
                     <span className="text-white">₹{prospectiveTotal}</span>
@@ -1851,15 +1849,15 @@ export function Rentals() {
                     const isUnlocked = prospectiveTotal >= 1600;
                     return (
                       <div className="space-y-2.5">
-                        <div className="w-full h-2.5 bg-black rounded-full overflow-hidden border border-white/5">
+                        <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
-                              isUnlocked ? "bg-afterhours-green shadow-[0_0_10px_rgba(16,185,129,0.3)]" : "bg-afterhours-purple"
+                              isUnlocked ? "bg-emerald-600 shadow-sm" : "bg-[#003791]"
                             }`}
                             style={{ width: `${progressVal}%` }}
                           />
                         </div>
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isUnlocked ? "text-afterhours-green" : "text-white/50"}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isUnlocked ? "text-emerald-700" : "text-slate-500"}`}>
                           {isUnlocked ? (
                             <span>🎉 UNLOCKED! Add-ons & Premium Games are now adjusted to maximum discount (Controller ₹249, Screen/Games ₹149)!</span>
                           ) : (
@@ -1872,14 +1870,14 @@ export function Rentals() {
                 </div>
 
               {/* Confirm submit buttons */}
-              <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center gap-4 justify-between">
-                <span className="text-[9px] font-mono uppercase text-white/40">
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center gap-4 justify-between">
+                <span className="text-[9px] font-mono uppercase text-slate-500">
                   Adds selections as combined setup additions
                 </span>
                 <button
                   type="button"
                   onClick={handleSmartCartSubmit}
-                  className="w-full sm:w-auto px-8 py-4 bg-linear-to-r from-afterhours-cyan to-afterhours-purple text-black font-black text-xs uppercase tracking-[0.2em] italic rounded-2xl transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-afterhours-cyan/10"
+                  className="w-full sm:w-auto px-8 py-4 bg-[#003791] text-white hover:bg-blue-800 font-black text-xs uppercase tracking-[0.2em] italic rounded-2xl transition-all shadow-sm"
                 >
                   Configure & Add Setup ➔
                 </button>
@@ -1912,7 +1910,7 @@ function AddonHoverPlayer({ photoUrl, videoUrl, addonName, mediaUrls = [] }: { p
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={() => setIsHovered(true)}
       onTouchEnd={() => setIsHovered(false)}
-      className="relative w-20 h-20 rounded-2xl overflow-hidden bg-black/50 border border-white/10 shrink-0 transition-transform duration-300 hover:scale-[1.03]"
+      className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-50 border border-slate-200 shrink-0 transition-transform duration-300 hover:scale-[1.03]"
     >
       {videoUrl && isHovered ? (
         <video
@@ -1939,16 +1937,16 @@ function AddonHoverPlayer({ photoUrl, videoUrl, addonName, mediaUrls = [] }: { p
             />
           </AnimatePresence>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/20 bg-white/[0.02]">
+          <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100">
             <Image size={16} />
           </div>
         )
       )}
 
       {videoUrl && !isHovered && (
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none z-10">
-          <div className="p-1 px-1.5 bg-afterhours-cyan/85 backdrop-blur-sm rounded-full text-black shadow-lg flex items-center gap-1 scale-90">
-            <Play size={8} className="fill-current" />
+        <div className="absolute inset-0 bg-slate-900/10 flex items-center justify-center pointer-events-none z-10">
+          <div className="p-1 px-1.5 bg-[#003791]/90 backdrop-blur-sm rounded-full text-white shadow-lg flex items-center gap-1 scale-90">
+            <Play size={8} className="fill-current text-white" />
             <span className="text-[8px] font-black uppercase tracking-wider font-mono font-bold">DEMO</span>
           </div>
         </div>
@@ -2014,7 +2012,7 @@ export function MediaCarousel({ mediaUrls, autoPlayInterval = 3000, className = 
               setIndex(i);
             }}
             className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-              i === index ? "bg-afterhours-cyan w-3.5 scale-110" : "bg-white/40 hover:bg-white/60"
+              i === index ? "bg-[#003791] w-3.5 scale-110" : "bg-slate-300 hover:bg-slate-400"
             }`}
           />
         ))}

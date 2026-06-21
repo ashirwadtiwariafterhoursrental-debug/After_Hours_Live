@@ -78,23 +78,23 @@ export function Blog() {
   };
 
   return (
-    <div id="public-blog-view" className="min-h-screen bg-afterhours-black text-white pt-32 pb-24 relative overflow-hidden">
+    <div id="public-blog-view" className="min-h-screen bg-slate-50 text-slate-800 pt-32 pb-24 relative overflow-hidden selection:bg-blue-100 selection:text-[#003791]">
       {/* Background radial glowing decorations */}
-      <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-afterhours-purple/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-0 w-[500px] h-[500px] bg-afterhours-cyan/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-blue-100/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 left-0 w-[500px] h-[500px] bg-indigo-100/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 max-w-7xl relative z-10">
         
         {/* Page Title Header */}
         <div className="text-center mb-16 md:mb-24">
-          <span className="text-xs uppercase tracking-[0.4em] text-afterhours-purple font-black block mb-4">
+          <span className="text-xs uppercase tracking-[0.4em] text-[#003791] font-black block mb-4">
             Official Feed & Press Releases
           </span>
-          <h1 className="text-5xl md:text-8xl font-black uppercase italic leading-[0.9] tracking-tighter mb-6">
+          <h1 className="text-5xl md:text-8xl font-black uppercase italic leading-[0.9] tracking-tighter text-slate-800 mb-6">
             The After <br />
-            <span className="text-afterhours-cyan">Hours Chronicle</span>
+            <span className="text-[#003791]">Hours Chronicle</span>
           </h1>
-          <p className="text-white/50 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
             Stay in the loop with dynamic tournament updates, premium at-home product drops, and corporate employee activation trends across Delhi NCR.
           </p>
         </div>
@@ -102,8 +102,8 @@ export function Blog() {
         {/* Loading UI State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-afterhours-purple" />
-            <p className="text-xs uppercase tracking-[0.3em] text-white/40 font-mono animate-pulse">
+            <Loader2 className="w-10 h-10 animate-spin text-[#003791]" />
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-mono animate-pulse font-bold">
               Retrieving Broadcast Logs...
             </p>
           </div>
@@ -111,10 +111,10 @@ export function Blog() {
 
         {/* Error UI State */}
         {!isLoading && error && (
-          <div className="max-w-md mx-auto p-8 rounded-3xl bg-red-950/20 border border-red-500/20 text-center text-rose-300">
+          <div className="max-w-md mx-auto p-8 rounded-3xl bg-red-50 border border-red-200 text-center text-red-700">
             <span className="text-4xl block mb-4">⚠️</span>
             <p className="text-sm font-semibold mb-2">{error}</p>
-            <p className="text-xs text-white/40 leading-relaxed">
+            <p className="text-xs text-slate-500 leading-relaxed">
               If the error persists, there may be temporary network interference. Feel free to re-check.
             </p>
           </div>
@@ -122,10 +122,10 @@ export function Blog() {
 
         {/* Empty Collection State */}
         {!isLoading && !error && blogs.length === 0 && (
-          <div className="max-w-xl mx-auto text-center py-16 bg-white/[0.01] border border-white/5 p-10 rounded-[40px]">
-            <BookOpen className="w-12 h-12 text-white/20 mx-auto mb-6" />
-            <h3 className="text-xl font-bold uppercase italic text-white mb-2">No Stories Broadcaster Yet</h3>
-            <p className="text-xs text-white/40 leading-relaxed mb-6">
+          <div className="max-w-xl mx-auto text-center py-16 bg-white border border-slate-200 p-10 rounded-[40px] shadow-xs">
+            <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-6" />
+            <h3 className="text-xl font-bold uppercase italic text-slate-800 mb-2">No Stories Broadcaster Yet</h3>
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
               Our operators are finalizing the initial logs. Click the operator gateway at the bottom of the page to author the first chronicle!
             </p>
           </div>
@@ -141,7 +141,7 @@ export function Blog() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group flex flex-col bg-afterhours-gray/30 border border-white/5 hover:border-afterhours-purple/20 backdrop-blur-md rounded-[32px] overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
+                className="group flex flex-col bg-white border border-slate-200 hover:border-[#003791]/35 rounded-[32px] overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-md"
               >
                 {/* Cover Image Container */}
                 <div className="aspect-[16/10] overflow-hidden relative">
@@ -151,10 +151,10 @@ export function Blog() {
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-afterhours-black via-transparent to-transparent opacity-60" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-60" />
                   
                   {/* Category Pill Tag */}
-                  <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-md border border-white/10 text-white font-mono uppercase text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest">
+                  <div className="absolute top-4 left-4 bg-[#003791] border border-[#003791] text-white font-mono uppercase text-[9px] font-bold px-3 py-1.5 rounded-full tracking-widest">
                     Chronicle Log
                   </div>
                 </div>
@@ -163,31 +163,31 @@ export function Blog() {
                 <div className="p-8 flex-1 flex flex-col justify-between">
                   <div>
                     {/* Timestamp & Reading Time */}
-                    <div className="flex items-center gap-4 text-[10px] text-white/40 uppercase font-mono mb-4">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={12} className="text-afterhours-purple" />
+                    <div className="flex items-center gap-4 text-[10px] text-slate-500 uppercase font-mono mb-4">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <Calendar size={12} className="text-[#003791]" />
                         {formatTimestamp(blog.createdAt)}
                       </span>
-                      <span className="w-1 h-1 rounded-full bg-white/20" />
-                      <span className="flex items-center gap-1.5">
-                        <Clock size={12} className="text-afterhours-cyan" />
+                      <span className="w-1 h-1 rounded-full bg-slate-300" />
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <Clock size={12} className="text-[#003791]" />
                         {getEstimatedReadingTime(blog.content)}
                       </span>
                     </div>
 
-                    <h3 className="text-xl md:text-2xl font-black uppercase italic leading-tight text-white mb-4 group-hover:text-afterhours-cyan transition-colors">
+                    <h3 className="text-xl md:text-2xl font-black uppercase italic leading-tight text-slate-800 mb-4 group-hover:text-[#003791] transition-colors">
                       {blog.title}
                     </h3>
 
                     {/* Excerpt */}
-                    <p className="text-xs text-white/50 leading-relaxed mb-6 line-clamp-3">
+                    <p className="text-xs text-slate-600 leading-relaxed mb-6 line-clamp-3">
                       {blog.content}
                     </p>
                   </div>
 
                   <button
                     onClick={() => setActiveBlog(blog)}
-                    className="self-start text-[10px] font-black uppercase tracking-widest text-[#90e0d0] hover:text-white transition-colors flex items-center gap-2 mt-4 cursor-pointer"
+                    className="self-start text-[10px] font-black uppercase tracking-widest text-[#003791] hover:text-blue-900 transition-colors flex items-center gap-2 mt-4 cursor-pointer font-bold"
                   >
                     <span>Read Full Story</span>
                     <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
@@ -206,7 +206,7 @@ export function Blog() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[9000] flex items-center justify-center p-4 md:p-6"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9000] flex items-center justify-center p-4 md:p-6"
             onClick={() => setActiveBlog(null)}
           >
             <motion.div
@@ -214,23 +214,23 @@ export function Blog() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 25 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="bg-afterhours-black border border-white/10 rounded-[36px] w-full max-w-3xl max-h-[85vh] overflow-y-auto overflow-x-hidden relative shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+              className="bg-white border border-slate-200 rounded-[36px] w-full max-w-3xl max-h-[85vh] overflow-y-auto overflow-x-hidden relative shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Cover Header Image */}
-              <div className="w-full aspect-video md:aspect-[21/9] overflow-hidden relative border-b border-white/5">
+              <div className="w-full aspect-video md:aspect-[21/9] overflow-hidden relative border-b border-slate-200">
                 <img
                   src={activeBlog.coverPhotoUrl}
                   alt={activeBlog.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-afterhours-black via-transparent to-transparent opacity-80" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-80" />
                 
                 {/* Close Button Inside Cover */}
                 <button
                   onClick={() => setActiveBlog(null)}
-                  className="absolute top-6 right-6 bg-black/60 hover:bg-black text-white hover:text-afterhours-pink p-2.5 rounded-full border border-white/15 transition-colors cursor-pointer shadow-lg z-20 hover:scale-105"
+                  className="absolute top-6 right-6 bg-white hover:bg-slate-100 text-slate-800 hover:text-[#003791] p-2.5 rounded-full border border-slate-200 transition-all cursor-pointer shadow-lg z-20 hover:scale-105"
                 >
                   <X size={18} />
                 </button>
@@ -238,36 +238,36 @@ export function Blog() {
 
               {/* Modal Writing details */}
               <div className="p-8 md:p-12">
-                <div className="flex items-center gap-4 text-[10px] text-white/40 uppercase font-mono mb-6 pb-4 border-b border-white/5">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar size={12} className="text-afterhours-purple" />
+                <div className="flex items-center gap-4 text-[10px] text-slate-500 uppercase font-mono mb-6 pb-4 border-b border-slate-200">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Calendar size={12} className="text-[#003791]" />
                     {formatTimestamp(activeBlog.createdAt)}
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-white/20" />
-                  <span className="flex items-center gap-1.5">
-                    <Clock size={12} className="text-afterhours-cyan" />
+                  <span className="w-1 h-1 rounded-full bg-slate-300" />
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Clock size={12} className="text-[#003791]" />
                     {getEstimatedReadingTime(activeBlog.content)}
                   </span>
-                  <span className="w-1 h-1 rounded-full bg-white/20 animate-pulse bg-afterhours-green" />
-                  <span className="flex items-center gap-1.5 text-afterhours-green font-bold">
+                  <span className="w-1 h-1 rounded-full bg-slate-300 animate-pulse bg-green-600" />
+                  <span className="flex items-center gap-1.5 text-green-700 font-bold">
                     <User size={12} />
                     Verified Operator
                   </span>
                 </div>
 
-                <h2 className="text-2xl md:text-4xl font-black italic uppercase leading-none tracking-tight mb-8 text-white">
+                <h2 className="text-2xl md:text-4xl font-black italic uppercase leading-none tracking-tight mb-8 text-slate-800">
                   {activeBlog.title}
                 </h2>
 
-                <div className="text-sm text-white/70 leading-relaxed font-normal whitespace-pre-wrap space-y-4">
+                <div className="text-sm text-slate-700 leading-relaxed font-normal whitespace-pre-wrap space-y-4 font-sans">
                   {activeBlog.content}
                 </div>
 
                 {/* Return button */}
-                <div className="mt-12 pt-6 border-t border-white/5 flex justify-end">
+                <div className="mt-12 pt-6 border-t border-slate-200 flex justify-end">
                   <button
                     onClick={() => setActiveBlog(null)}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl font-bold uppercase tracking-widest text-[10px] text-white/80 hover:text-white transition-all cursor-pointer"
+                    className="px-6 py-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl font-bold uppercase tracking-widest text-[10px] text-slate-700 hover:text-slate-900 transition-all cursor-pointer"
                   >
                     Return to Feed
                   </button>

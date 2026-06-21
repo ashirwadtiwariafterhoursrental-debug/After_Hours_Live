@@ -260,22 +260,22 @@ export function CustomerLogin() {
   };
 
   return (
-    <div id="customer-login-view" className="min-h-screen bg-afterhours-black flex items-center justify-center pt-32 pb-16 px-6 relative overflow-hidden">
+    <div id="customer-login-view" className="min-h-screen bg-slate-50 flex items-center justify-center pt-32 pb-16 px-6 relative overflow-hidden">
       {/* Invisible Recaptcha Mount Point */}
       <div id="recaptcha-container"></div>
 
       {/* Glow Orbs in Background */}
-      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-afterhours-purple/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-afterhours-cyan/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-afterhours-gray/30 border border-white/5 backdrop-blur-xl rounded-[40px] p-8 md:p-10 shadow-[0_30px_60px_rgba(0,0,0,0.6)] border-t-afterhours-cyan/20"
+        className="w-full max-w-md bg-white border border-slate-200 rounded-[40px] p-8 md:p-10 shadow-xl border-t-[#003791]/30"
       >
         {/* Toggle buttons between Sign In and Sign Up */}
-        <div className="flex bg-white/5 p-1 rounded-2xl mb-6 border border-white/5">
+        <div className="flex bg-slate-100 p-1 rounded-2xl mb-6 border border-slate-200">
           <button
             type="button"
             onClick={() => {
@@ -284,7 +284,7 @@ export function CustomerLogin() {
               setConfirmationResult(null);
             }}
             className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-              !isSignUp ? "bg-white/10 text-white shadow-md font-black" : "text-white/40 hover:text-white/60"
+              !isSignUp ? "bg-white text-[#003791] shadow-sm font-black" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             Sign In
@@ -298,7 +298,7 @@ export function CustomerLogin() {
               setConfirmationResult(null);
             }}
             className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-              isSignUp ? "bg-white/10 text-white shadow-md font-black" : "text-white/40 hover:text-white/60"
+              isSignUp ? "bg-white text-[#003791] shadow-sm font-black" : "text-slate-500 hover:text-slate-800"
             }`}
           >
             Create Account
@@ -306,13 +306,13 @@ export function CustomerLogin() {
         </div>
 
         <div className="text-center mb-6">
-          <span className="text-[10px] uppercase tracking-[0.40em] text-afterhours-cyan font-bold block mb-1">
+          <span className="text-[10px] uppercase tracking-[0.40em] text-[#003791] font-black block mb-1">
             {isSignUp ? "JOIN THE ELITE CLUB" : "WELCOME BACK TO THE CAFE"}
           </span>
-          <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">
+          <h2 className="text-2xl font-black italic tracking-tighter uppercase text-slate-800">
             {isSignUp ? "Elite Member Portal" : "Sign In to Portal"}
           </h2>
-          <p className="text-[11px] text-white/40 mt-1.5 max-w-xs mx-auto leading-relaxed">
+          <p className="text-[11px] text-slate-600 mt-1.5 max-w-xs mx-auto leading-relaxed">
             {isSignUp 
               ? "Gain secure access to premium high-end hardware rentals and custom tournament profiles."
               : "Access your persistent dashboard, pending rentals, and verified KYC reports."
@@ -324,16 +324,16 @@ export function CustomerLogin() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-6 p-4 bg-red-950/30 border border-red-500/20 text-rose-300 rounded-2xl flex items-start gap-3 text-xs"
+            className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl flex items-start gap-3 text-xs"
           >
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-400" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
             <span className="font-mono leading-relaxed">{error}</span>
           </motion.div>
         )}
 
         {/* Dynamic Switch: Email VS Phone Login for existing users */}
         {!isSignUp && (
-          <div className="flex bg-black/40 p-1.5 rounded-xl mb-6 border border-white/5 text-[10px] uppercase font-bold justify-center gap-4">
+          <div className="flex bg-slate-100 p-1.5 rounded-xl mb-6 border border-slate-200 text-[10px] uppercase font-bold justify-center gap-4">
             <button
                type="button"
                onClick={() => {
@@ -341,7 +341,7 @@ export function CustomerLogin() {
                  setError("");
                  setConfirmationResult(null);
                }}
-               className={`px-3 py-1.5 rounded-lg transition-all ${!usePhoneAuth ? "text-afterhours-cyan bg-white/5 font-black" : "text-white/40 hover:text-white"}`}
+               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${!usePhoneAuth ? "text-[#003791] bg-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800"}`}
             >
               Email Login
             </button>
@@ -352,7 +352,7 @@ export function CustomerLogin() {
                  setError("");
                  setConfirmationResult(null);
                }}
-               className={`px-3 py-1.5 rounded-lg transition-all ${usePhoneAuth ? "text-afterhours-cyan bg-white/5 font-black" : "text-white/40 hover:text-white"}`}
+               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${usePhoneAuth ? "text-[#003791] bg-white shadow-sm font-black" : "text-slate-500 hover:text-slate-800"}`}
             >
               Phone OTP Login
             </button>
@@ -363,8 +363,8 @@ export function CustomerLogin() {
         {isSignUp ? (
           /* MANDATORY Google or Phone OTP Registration View */
           <div className="space-y-6">
-            <div className="bg-afterhours-cyan/10 border border-afterhours-cyan/25 p-4 rounded-2xl text-[11px] text-white/80 leading-relaxed text-center font-semibold">
-              🔒 <span className="text-afterhours-cyan font-bold">Registration Rule:</span> Creating an account requires verified Google Authentication or a verified WhatsApp Phone Number OTP to ensure reliable member profiles.
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-[11px] text-[#003791] leading-relaxed text-center font-bold">
+              🔒 <span className="text-[#003791] font-black">Registration Rule:</span> Creating an account requires verified Google Authentication or a verified WhatsApp Phone Number OTP to ensure reliable member profiles.
             </div>
 
             {/* If not in phone OTP verification state, show both options nicely and prominently */}
@@ -372,14 +372,14 @@ export function CustomerLogin() {
               <div className="space-y-4">
                 {/* 1. Google Register Button */}
                 <div>
-                  <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 block mb-2 font-mono text-center">
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-2 font-mono text-center">
                     Method A: Fast Setup with Google
                   </label>
                   <button
                     type="button"
                     onClick={handleGoogleSignIn}
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-afterhours-purple to-afterhours-pink hover:brightness-110 text-white font-black uppercase tracking-wider text-xs italic py-4 rounded-2xl transition-all shadow-[0_4px_15px_rgba(168,85,247,0.2)] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-55"
+                    className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-xs py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-55"
                   >
                     <svg className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24">
                       <path fill="white" d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955.938 15.342 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.79-.086-1.393-.193-1.925H12.24z"/>
@@ -389,19 +389,19 @@ export function CustomerLogin() {
                 </div>
 
                 <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-white/5"></div>
-                  <span className="flex-shrink mx-4 text-white/20 text-[9px] uppercase tracking-[0.2em] font-mono">Or security option B</span>
-                  <div className="flex-grow border-t border-white/5"></div>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-4 text-slate-400 text-[9px] uppercase tracking-[0.2em] font-mono">Or security option B</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
                 </div>
 
                 {/* 2. Phone OTP Form Inline */}
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 block mb-2 font-mono text-center">
+                    <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-2 font-mono text-center">
                       Method B: Register via WhatsApp OTP
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                         <Smartphone size={16} />
                       </span>
                       <input
@@ -410,7 +410,7 @@ export function CustomerLogin() {
                         placeholder="e.g. +91 9999988888"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                       />
                     </div>
                   </div>
@@ -418,7 +418,7 @@ export function CustomerLogin() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 hover:text-white font-black uppercase tracking-wider text-[11px] py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55 opacity-90 hover:opacity-100"
+                    className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-[11px] py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                   >
                     {isLoading ? (
                       <>
@@ -439,19 +439,19 @@ export function CustomerLogin() {
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block font-mono">
+                    <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block font-mono">
                       Enter 6-Digit Registration PIN
                     </label>
                     <button
                       type="button"
                       onClick={() => setConfirmationResult(null)}
-                      className="text-[10px] text-afterhours-cyan hover:underline uppercase tracking-wide cursor-pointer"
+                      className="text-[10px] text-[#003791] font-black hover:underline uppercase tracking-wide cursor-pointer"
                     >
                       Change Number
                     </button>
                   </div>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                    <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                       <Lock size={16} />
                     </span>
                     <input
@@ -461,7 +461,7 @@ export function CustomerLogin() {
                       placeholder="e.g. 123456"
                       value={verificationCode}
                       onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                      className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm tracking-[0.4em] font-bold text-center text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                      className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm tracking-[0.4em] font-bold text-center text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                     />
                   </div>
                 </div>
@@ -469,11 +469,11 @@ export function CustomerLogin() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-afterhours-green to-afterhours-cyan text-black font-black uppercase tracking-wider text-xs italic py-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                  className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-xs py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-black" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
                       <span>Verifying PIN...</span>
                     </>
                   ) : (
@@ -494,11 +494,11 @@ export function CustomerLogin() {
               {!confirmationResult ? (
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block ml-1 font-mono">
+                    <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                       WhatsApp Phone Number
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                         <Smartphone size={16} />
                       </span>
                       <input
@@ -507,7 +507,7 @@ export function CustomerLogin() {
                         placeholder="e.g. +91 9999988888"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                       />
                     </div>
                   </div>
@@ -515,11 +515,11 @@ export function CustomerLogin() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-afterhours-purple to-afterhours-pink hover:brightness-110 text-white font-black uppercase tracking-wider text-xs italic py-4 rounded-2xl transition-all shadow-[0_4px_15px_rgba(168,85,247,0.2)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                    className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-xs py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
                         <span>Sending Secure Token...</span>
                       </>
                     ) : (
@@ -534,19 +534,19 @@ export function CustomerLogin() {
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block font-mono">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block font-mono">
                         Enter 6-Digit Verification PIN
                       </label>
                       <button
                         type="button"
                         onClick={() => setConfirmationResult(null)}
-                        className="text-[10px] text-afterhours-cyan hover:underline uppercase tracking-wide cursor-pointer"
+                        className="text-[10px] text-[#003791] font-black hover:underline uppercase tracking-wide cursor-pointer"
                       >
                         Change Number
                       </button>
                     </div>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                         <Lock size={16} />
                       </span>
                       <input
@@ -556,7 +556,7 @@ export function CustomerLogin() {
                         placeholder="e.g. 123456"
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm tracking-[0.4em] font-bold text-center text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm tracking-[0.4em] font-bold text-center text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                       />
                     </div>
                   </div>
@@ -564,11 +564,11 @@ export function CustomerLogin() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-afterhours-green to-afterhours-cyan text-black font-black uppercase tracking-wider text-xs italic py-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                    className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-xs py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-black" />
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
                         <span>Verifying PIN...</span>
                       </>
                     ) : (
@@ -585,11 +585,11 @@ export function CustomerLogin() {
             /* Email Auth View */
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block ml-1 font-mono">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                     <Mail size={16} />
                   </span>
                   <input
@@ -599,17 +599,17 @@ export function CustomerLogin() {
                     placeholder="you@corporate.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold tracking-widest text-white/50 block ml-1 font-mono">
+                <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                   Password
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                     <KeyRound size={16} />
                   </span>
                   <input
@@ -619,7 +619,7 @@ export function CustomerLogin() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-afterhours-cyan transition-colors"
+                    className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                   />
                 </div>
               </div>
@@ -628,11 +628,11 @@ export function CustomerLogin() {
                 id="auth-submit-btn"
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 bg-gradient-to-r from-afterhours-purple to-afterhours-pink hover:brightness-110 text-white font-black uppercase tracking-wider text-xs italic py-4 rounded-2xl transition-all shadow-[0_4px_15px_rgba(168,85,247,0.2)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                className="w-full mt-2 bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-wider text-xs py-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                     <span>Processing Authorization...</span>
                   </>
                 ) : (
@@ -648,9 +648,9 @@ export function CustomerLogin() {
 
         {/* Global Social Login Accents */}
         {!isSignUp && (
-          <div className="mt-8 pt-6 border-t border-white/5 space-y-4">
+          <div className="mt-8 pt-6 border-t border-slate-200 space-y-4">
             <div className="relative flex justify-center text-xs uppercase font-mono tracking-widest">
-              <span className="bg-afterhours-black/80 px-3 text-white/30">Or shortcut credentials</span>
+              <span className="bg-white px-3 text-slate-400">Or shortcut credentials</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -659,7 +659,7 @@ export function CustomerLogin() {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="py-3 px-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/5 text-xs text-white uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                className="py-3 px-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-xs text-slate-700 uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#EA4335" d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.578-7.859-8s3.53-8 7.859-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C17.955.938 15.342 0 12.24 0 5.58 0 0 5.37 0 12s5.58 12 12.24 12c6.96 0 11.57-4.89 11.57-11.79 0-.79-.086-1.393-.193-1.925H12.24z"/>
@@ -672,7 +672,7 @@ export function CustomerLogin() {
                 type="button"
                 onClick={handleAppleSignIn}
                 disabled={isLoading}
-                className="py-3 px-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/5 text-xs text-white uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
+                className="py-3 px-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-xs text-slate-700 uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-55"
               >
                 <svg className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24">
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-.96.04-2.13.64-2.82 1.45-.6.68-1.12 1.83-.98 2.94.1.08.31.22.42.22.86-.01 1.73-.74 2.39-1.55z"/>
@@ -683,13 +683,13 @@ export function CustomerLogin() {
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center flex flex-col gap-2">
-          <p className="text-[10px] text-white/30 tracking-wider">
+        <div className="mt-8 pt-6 border-t border-slate-200 text-center flex flex-col gap-2">
+          <p className="text-[10px] text-slate-500 tracking-wider">
             🔒 Fully encrypted private sessions backed by secure Firebase auth.
           </p>
-          <p className="text-[10px] text-white/30">
+          <p className="text-[10px] text-slate-500">
             Are you a system operator?{" "}
-            <Link to="/admin" className="text-afterhours-purple font-bold hover:underline">
+            <Link to="/admin" className="text-[#003791] font-black hover:underline">
               System Admin Gateway
             </Link>
           </p>

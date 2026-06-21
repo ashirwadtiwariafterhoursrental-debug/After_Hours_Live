@@ -263,9 +263,9 @@ export function CustomerProfile() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-afterhours-black text-white flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-afterhours-cyan" />
-        <p className="text-xs uppercase tracking-[0.3em] text-white/40 font-mono animate-pulse">
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#003791]" />
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-mono animate-pulse">
           Validating Member Crypt...
         </p>
       </div>
@@ -273,47 +273,47 @@ export function CustomerProfile() {
   }
 
   return (
-    <div id="customer-profile-view" className="min-h-screen bg-afterhours-black text-white pt-32 pb-24 relative overflow-hidden">
+    <div id="customer-profile-view" className="min-h-screen bg-slate-50 text-slate-800 pt-32 pb-24 relative overflow-hidden">
       {/* Dynamic graphic backgrounds */}
-      <div className="absolute top-[10%] left-0 w-[500px] h-[500px] bg-afterhours-purple/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[10%] right-0 w-[500px] h-[500px] bg-afterhours-cyan/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[10%] left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 max-w-5xl relative z-10">
         
         {/* Profile Heading Section */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 pb-8 border-b border-white/5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 pb-8 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className="text-xs uppercase tracking-[0.3em] text-afterhours-cyan font-black bg-afterhours-cyan/10 px-3 py-1 rounded-full border border-afterhours-cyan/20">
+              <span className="text-xs uppercase tracking-[0.3em] text-[#003791] font-extrabold bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                 Premium Club Membership
               </span>
               {profile.kycStatus === "unverified" && (
-                <span className="text-[10px] uppercase font-bold text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20 flex items-center gap-1.5 animate-pulse">
+                <span className="text-[10px] uppercase font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 flex items-center gap-1.5 animate-pulse">
                   <ShieldAlert size={12} /> Unverified
                 </span>
               )}
               {profile.kycStatus === "pending" && (
-                <span className="text-[10px] uppercase font-bold text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 flex items-center gap-1.5">
-                  <Loader2 size={12} className="animate-spin" /> Pending Review
+                <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
+                  <Loader2 size={12} className="animate-spin text-amber-600" /> Pending Review
                 </span>
               )}
               {profile.kycStatus === "verified" && (
-                <span className="text-[10px] uppercase font-extrabold text-afterhours-green bg-afterhours-green/10 px-2.5 py-1 rounded-full border border-afterhours-green/20 flex items-center gap-1.5">
-                  <ShieldCheck size={12} className="shrink-0" /> Verified Elite
+                <span className="text-[10px] uppercase font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                  <ShieldCheck size={12} className="shrink-0 text-emerald-600" /> Verified Elite
                 </span>
               )}
             </div>
-            <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white">
+            <h1 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-slate-800">
               My Profile Dashboard
             </h1>
-            <p className="text-white/40 text-xs md:text-sm mt-1 max-w-xl">
+            <p className="text-slate-600 text-xs md:text-sm mt-1 max-w-xl">
               Manage your delivery coordinates and verify accounts for quick, hassle-free gaming rig rentals.
             </p>
           </div>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 bg-white/5 hover:bg-rose-950/20 border border-white/10 hover:border-rose-500/10 px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest text-white/70 hover:text-rose-300 transition-all cursor-pointer"
+            className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-5 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-rose-600 transition-all cursor-pointer shadow-sm"
           >
             <LogOut size={14} />
             <span>Sign Out Session</span>
@@ -327,12 +327,12 @@ export function CustomerProfile() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mb-8 p-6 bg-amber-500/5 rounded-3xl border border-amber-500/20 flex items-start gap-4 text-amber-200"
+              className="mb-8 p-6 bg-amber-50 rounded-3xl border border-amber-200 flex items-start gap-4 text-amber-800"
             >
-              <ShieldAlert className="w-6 h-6 shrink-0 text-amber-400 mt-1" />
+              <ShieldAlert className="w-6 h-6 shrink-0 text-amber-600 mt-1" />
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wider italic">ID Verification Required</h4>
-                <p className="text-xs text-amber-200/60 mt-1 leading-relaxed">
+                <p className="text-xs text-amber-700 mt-1 leading-relaxed">
                   To book our premium setups without standard high security cash deposits, we require a scan or photo or proof of your Corporate ID/Gov Card. Simply drop your credentials in Section B below!
                 </p>
               </div>
@@ -344,13 +344,13 @@ export function CustomerProfile() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mb-8 p-6 bg-cyan-950/20 rounded-3xl border border-afterhours-cyan/20 flex items-start gap-4 text-cyan-200"
+              className="mb-8 p-6 bg-blue-50 rounded-3xl border border-blue-200 flex items-start gap-4 text-blue-800"
             >
-              <Sparkles className="w-6 h-6 shrink-0 text-afterhours-cyan mt-1 animate-pulse" />
+              <Sparkles className="w-6 h-6 shrink-0 text-[#003791] mt-1 animate-pulse" />
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wider italic">Verification Check in Progress</h4>
-                <p className="text-xs text-white/50 mt-1 leading-relaxed">
-                  Our system operator team has received your reference file <strong className="text-afterhours-cyan">"{profile.kycFileName}"</strong>. We are matching credentials with standard directories within Delhi NCR. Once approved, your status will instantly transition to <strong className="text-afterhours-green">Verified Elite</strong>.
+                <p className="text-xs text-slate-700 mt-1 leading-relaxed">
+                  Our system operator team has received your reference file <strong className="text-[#003791]">"{profile.kycFileName}"</strong>. We are matching credentials with standard directories within Delhi NCR. Once approved, your status will instantly transition to <strong className="text-[#003791] font-bold">Verified Elite</strong>.
                 </p>
               </div>
             </motion.div>
@@ -361,12 +361,12 @@ export function CustomerProfile() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mb-8 p-6 bg-emerald-950/20 rounded-3xl border border-emerald-500/20 flex items-start gap-4 text-emerald-200"
+              className="mb-8 p-6 bg-emerald-50 rounded-3xl border border-emerald-200 flex items-start gap-4 text-emerald-800"
             >
-              <CheckCircle2 className="w-6 h-6 shrink-0 text-afterhours-green mt-1" />
+              <CheckCircle2 className="w-6 h-6 shrink-0 text-emerald-600 mt-1" />
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wider italic">Elite Member Verified</h4>
-                <p className="text-xs text-white/50 mt-1 leading-relaxed">
+                <p className="text-xs text-slate-700 mt-1 leading-relaxed">
                   Host-ready verification completed! You now have fully unrestricted access to request premium setups (VR headgear, PlayStation 5 bundles, Racing Cockpits) with complete zero-deposit privileges.
                 </p>
               </div>
@@ -378,39 +378,39 @@ export function CustomerProfile() {
           
           {/* Grid Panel Left: Form details */}
           <div className="lg:col-span-3 space-y-8">
-            <div className="bg-afterhours-gray/20 border border-white/5 rounded-[40px] p-6 md:p-8 backdrop-blur-md">
-              <h3 className="text-lg font-black uppercase italic text-white mb-6 flex items-center gap-2">
-                <User size={18} className="text-afterhours-cyan" />
+            <div className="bg-white border border-slate-200 rounded-[40px] p-6 md:p-8 shadow-sm">
+              <h3 className="text-lg font-black uppercase italic text-slate-800 mb-6 flex items-center gap-2">
+                <User size={18} className="text-[#003791]" />
                 <span>Section A: Personal Coordinates</span>
               </h3>
 
               {profileSuccess && (
-                <div className="mb-6 p-4 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 rounded-2xl flex items-center gap-2.5 text-xs">
-                  <BookmarkCheck className="w-4 h-4 shrink-0 text-afterhours-green" />
+                <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2.5 text-xs">
+                  <BookmarkCheck className="w-4 h-4 shrink-0 text-emerald-600" />
                   <span className="font-mono">{profileSuccess}</span>
                 </div>
               )}
 
               {profileError && (
-                <div className="mb-6 p-4 bg-red-950/30 border border-red-500/20 text-rose-300 rounded-2xl flex items-center gap-2.5 text-xs">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl flex items-center gap-2.5 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                   <span className="font-mono">{profileError}</span>
                 </div>
               )}
 
               {isProfileLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-afterhours-cyan" />
-                  <span className="text-[10px] uppercase tracking-widest text-white/30 font-mono">Fetching fields from DB...</span>
+                  <Loader2 className="w-8 h-8 animate-spin text-[#003791]" />
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-mono">Fetching fields from DB...</span>
                 </div>
               ) : (
                 <form onSubmit={handleProfileSave} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 block ml-1 font-mono">
+                    <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                       Full Registered Name
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                         <User size={16} />
                       </span>
                       <input
@@ -419,35 +419,35 @@ export function CustomerProfile() {
                         value={profile.name}
                         onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                         placeholder="e.g. Raghav Sharma"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-afterhours-purple transition-colors"
+                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 block ml-1 font-mono">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                         Primary Email (Static)
                       </label>
                       <div className="relative opacity-60">
-                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                           <User size={16} />
                         </span>
                         <input
                           type="email"
                           disabled
                           value={profile.email}
-                          className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white/70 cursor-not-allowed"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-500 cursor-not-allowed"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase font-bold tracking-widest text-white/40 block ml-1 font-mono">
+                      <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 block ml-1 font-mono">
                         WhatsApp Contact Phone
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/30">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
                           <Phone size={16} />
                         </span>
                         <input
@@ -456,18 +456,18 @@ export function CustomerProfile() {
                           value={profile.phone}
                           onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                           placeholder="e.g. +91 99999 88888"
-                          className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-afterhours-purple transition-colors"
+                          className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase font-bold tracking-[0.1em] text-white/40 block ml-1 font-mono">
+                    <label className="text-[10px] uppercase font-bold tracking-[0.1em] text-slate-500 block ml-1 font-mono">
                       Default Delivery Physical Address (Noida, Delhi, Gurgaon)
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-4 pt-4 flex items-start text-white/30">
+                      <span className="absolute inset-y-0 left-0 pl-4 pt-4 flex items-start text-slate-400">
                         <MapPin size={16} />
                       </span>
                       <textarea
@@ -476,7 +476,7 @@ export function CustomerProfile() {
                         value={profile.address}
                         onChange={(e) => setProfile({ ...profile, address: e.target.value })}
                         placeholder="Provide deep details: Apartment/Office floor block, building name, landmark, and pin code."
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-afterhours-purple transition-colors resize-none"
+                        className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#003791] transition-colors resize-none"
                       />
                     </div>
                   </div>
@@ -484,11 +484,11 @@ export function CustomerProfile() {
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="w-full bg-[#90e0d0] hover:bg-opacity-80 text-black font-black uppercase tracking-widest text-xs py-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(144,224,208,0.2)]"
+                    className="w-full bg-[#003791] hover:bg-blue-800 text-white font-bold uppercase tracking-widest text-xs py-4 rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-black" />
+                        <Loader2 className="w-4 h-4 animate-spin text-[#003791]" />
                         <span>Saving coordinates...</span>
                       </>
                     ) : (
@@ -505,25 +505,25 @@ export function CustomerProfile() {
 
           {/* Grid Panel Right: KYC Upload zone */}
           <div className="lg:col-span-2 space-y-8">
-            <div className="bg-afterhours-gray/20 border border-white/5 rounded-[40px] p-6 md:p-8 backdrop-blur-md flex flex-col justify-between h-full">
+            <div className="bg-white border border-slate-200 rounded-[40px] p-6 md:p-8 flex flex-col justify-between h-full shadow-sm">
               <div>
-                <h3 className="text-lg font-black uppercase italic text-white mb-2 flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-afterhours-purple" />
+                <h3 className="text-lg font-black uppercase italic text-slate-800 mb-2 flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-[#003791]" />
                   <span>Section B: KYC Upload</span>
                 </h3>
-                <p className="text-[11px] text-white/50 leading-relaxed mb-6 font-mono">
+                <p className="text-[11px] text-slate-500 leading-relaxed mb-6 font-mono">
                   VERIFY ID (UPLOAD CORPORATE / GOV PROOF)
                 </p>
 
                 {uploadSuccess && (
-                  <div className="mb-4 p-4 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 rounded-2xl text-[11px] font-mono leading-relaxed">
+                  <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-[11px] font-mono leading-relaxed">
                     {uploadSuccess}
                   </div>
                 )}
 
                 {uploadError && (
-                  <div className="mb-4 p-4 bg-red-950/20 border border-red-500/20 text-rose-300 rounded-2xl text-[11px] font-mono leading-relaxed flex items-start gap-1.5">
-                    <AlertCircle size={14} className="shrink-0 mt-0.5 text-rose-400" />
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-[11px] font-mono leading-relaxed flex items-start gap-1.5">
+                    <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-600" />
                     <span>{uploadError}</span>
                   </div>
                 )}
@@ -537,8 +537,8 @@ export function CustomerProfile() {
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-[32px] p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-4 group ${
                     dragActive 
-                      ? "border-afterhours-cyan bg-afterhours-cyan/5" 
-                      : "border-white/10 hover:border-afterhours-purple/30 bg-black/20"
+                      ? "border-[#003791] bg-blue-50/50" 
+                      : "border-slate-200 hover:border-[#003791]/50 bg-slate-50"
                   }`}
                 >
                   <input
@@ -552,25 +552,25 @@ export function CustomerProfile() {
                   {isUploading ? (
                     <div className="py-6 flex flex-col items-center gap-3">
                       <div className="relative flex items-center justify-center">
-                        <Loader2 className="w-12 h-12 text-afterhours-cyan animate-spin" />
-                        <span className="absolute text-[10px] font-extrabold font-mono text-afterhours-cyan">
+                        <Loader2 className="w-12 h-12 text-[#003791] animate-spin" />
+                        <span className="absolute text-[10px] font-extrabold font-mono text-[#003791]">
                           {uploadProgress}%
                         </span>
                       </div>
-                      <p className="text-xs text-white/60 font-semibold uppercase tracking-wider animate-pulse">
+                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider animate-pulse">
                         Pushing File...
                       </p>
                     </div>
                   ) : (
                     <>
-                      <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 group-hover:border-afterhours-purple/30 group-hover:bg-afterhours-purple/5 transition-all">
-                        <UploadCloud className="text-white/40 group-hover:text-afterhours-purple transition-colors" size={28} />
+                      <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 group-hover:border-[#003791]/30 group-hover:bg-blue-50/20 transition-all">
+                        <UploadCloud className="text-slate-400 group-hover:text-[#003791] transition-colors" size={28} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-white group-hover:text-afterhours-cyan transition-colors">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-700 group-hover:text-[#003791] transition-colors">
                           Click or Drag File here
                         </p>
-                        <p className="text-[10px] text-white/30 mt-1.5 leading-relaxed max-w-[180px] mx-auto">
+                        <p className="text-[10px] text-slate-500 mt-1.5 leading-relaxed max-w-[180px] mx-auto">
                           Accepts PNG, JPG, PDF (Max file size 8MB).
                         </p>
                       </div>
@@ -580,18 +580,18 @@ export function CustomerProfile() {
 
                 {/* Display current KYC File reference */}
                 {profile.kycUrl && (
-                  <div className="mt-6 p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between gap-3 overflow-hidden">
+                  <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 overflow-hidden">
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <FileText size={16} className="text-afterhours-cyan shrink-0" />
+                      <FileText size={16} className="text-[#003791] shrink-0" />
                       <div className="overflow-hidden">
-                        <p className="text-xs font-bold text-white/80 uppercase truncate">
+                        <p className="text-xs font-bold text-slate-700 uppercase truncate">
                           {profile.kycFileName || "Verification ID Doc"}
                         </p>
                         <a 
                           href={profile.kycUrl} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="text-[10px] text-[#90e0d0] hover:underline font-mono"
+                          className="text-[10px] text-[#003791] hover:underline font-mono"
                         >
                           View Uploaded Proof
                         </a>
@@ -599,12 +599,12 @@ export function CustomerProfile() {
                     </div>
                     <div>
                       {profile.kycStatus === "pending" && (
-                        <span className="text-[9px] uppercase font-bold text-amber-300 font-mono bg-amber-500/10 px-2 py-1 rounded">
+                        <span className="text-[9px] uppercase font-bold text-amber-700 font-mono bg-amber-50 border border-amber-200 px-2 py-1 rounded">
                           Reviewing
                         </span>
                       )}
                       {profile.kycStatus === "verified" && (
-                        <span className="text-[9px] uppercase font-bold text-emerald-400 font-mono bg-emerald-500/10 px-2 py-1 rounded">
+                        <span className="text-[9px] uppercase font-bold text-emerald-700 font-mono bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
                           Approved
                         </span>
                       )}
@@ -613,11 +613,11 @@ export function CustomerProfile() {
                 )}
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/5 text-center bg-white/[0.01] p-4 rounded-2xl">
-                <p className="text-[10px] text-white/30 leading-relaxed uppercase tracking-widest font-mono">
+              <div className="mt-8 pt-6 border-t border-slate-200 text-center bg-slate-50 p-4 rounded-2xl">
+                <p className="text-[10px] text-slate-500 leading-relaxed uppercase tracking-widest font-mono">
                   🛡️ GDPR Compliant & AES Encrypted Storage.
                 </p>
-                <p className="text-[9px] text-white/20 leading-relaxed mt-1">
+                <p className="text-[9px] text-slate-400 leading-relaxed mt-1">
                   Uploaded files are only accessible to system operators for identity validation.
                 </p>
               </div>

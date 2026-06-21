@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, FormEvent, DragEvent, ChangeEvent, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc, writeBatch, getDocs, where } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { auth, db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
-import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play, Calendar, Monitor, Maximize, Mic, Zap } from "lucide-react";
+import { FleetManagement } from "../components/FleetManagement";
+import PartnerOnboarding from "../components/PartnerOnboarding";
+import { LogOut, Plus, Image as ImageIcon, CheckCircle, FileText, Loader2, ArrowRight, X, FolderKanban, Sliders, Trash2, UploadCloud, Gamepad2, ShoppingBag, BellRing, Heart, Layers, AlertCircle, Eye, Play, Calendar, Monitor, Maximize, Mic, Zap, Shield, User } from "lucide-react";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -106,9 +108,8 @@ export function AdminDashboard() {
   ];
 
   // Route protection, layout tabs, & operational states
-  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "content" | "calendar" | "vault">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "content" | "calendar" | "vault" | "fleet" | "onboarding">("orders");
   const [orders, setOrders] = useState<any[]>([]);
-  const [waitlistItems, setWaitlistItems] = useState<any[]>([]);
   const [kycModalUrl, setKycModalUrl] = useState<string | null>(null);
   const [updatingOrderStatusId, setUpdatingOrderStatusId] = useState<string | null>(null);
 
@@ -136,17 +137,37 @@ export function AdminDashboard() {
   
   // Real-time subscription to dynamic inventory_vault categories
   useEffect(() => {
-    const q = query(collection(db, "inventory_vault"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach(docSnap => {
-        list.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      setCategoriesList(list);
-    }, (err) => {
-      console.error("Error subscribing to inventory_vault:", err);
+    let unsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const q = query(collection(db, "inventory_vault"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach(docSnap => {
+            list.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          setCategoriesList(list);
+        }, (err) => {
+          console.error("Error subscribing to inventory_vault:", err);
+        });
+      } else {
+        setCategoriesList([]);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
   // Real-time subscription to units of each category
@@ -207,67 +228,86 @@ export function AdminDashboard() {
       return;
     }
 
-    const ordersRef = collection(db, "orders");
-    const q = selectedAssetUnit.startsWith("ALL_")
-      ? query(ordersRef)
-      : query(ordersRef, where("assignedUnits", "array-contains", selectedAssetUnit));
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const oStatus = data["Order Status"] || data.Status || data.status || "";
-        
-        // Filter out cancelled or rejected orders
-        if (oStatus !== "Cancelled" && oStatus !== "Rejected") {
-          // Normalize dates to local midnight at browser timezone for maximum alignment
-          const startStr = data["Start date"] || data.startDate || "";
-          const endStr = data["End date"] || data.endDate || "";
-          
-          let normalizedStart = "";
-          let normalizedEnd = "";
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
 
-          const parseToLocalMidnightString = (dateStr: string): string => {
-            if (!dateStr) return "";
-            const trimmed = dateStr.trim();
-            const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (matchYMD) {
-              const d = new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
-              return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const ordersRef = collection(db, "orders");
+        const q = selectedAssetUnit.startsWith("ALL_")
+          ? query(ordersRef)
+          : query(ordersRef, where("assignedUnits", "array-contains", selectedAssetUnit));
+
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const oStatus = data["Order Status"] || data.Status || data.status || "";
+            
+            // Filter out cancelled or rejected orders
+            if (oStatus !== "Cancelled" && oStatus !== "Rejected") {
+              // Normalize dates to local midnight at browser timezone for maximum alignment
+              const startStr = data["Start date"] || data.startDate || "";
+              const endStr = data["End date"] || data.endDate || "";
+              
+              let normalizedStart = "";
+              let normalizedEnd = "";
+
+              const parseToLocalMidnightString = (dateStr: string): string => {
+                if (!dateStr) return "";
+                const trimmed = dateStr.trim();
+                const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (matchYMD) {
+                  const d = new Date(parseInt(matchYMD[1], 10), parseInt(matchYMD[2], 10) - 1, parseInt(matchYMD[3], 10), 0, 0, 0, 0);
+                  return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
+                }
+                const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+                if (matchDMY) {
+                  const d = new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
+                  return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
+                }
+                const parsed = new Date(trimmed);
+                if (!isNaN(parsed.getTime())) {
+                  const d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
+                  return d.toISOString().split('T')[0];
+                }
+                return "";
+              };
+
+              if (startStr) normalizedStart = parseToLocalMidnightString(startStr);
+              if (endStr) normalizedEnd = parseToLocalMidnightString(endStr);
+
+              list.push({
+                id: docSnap.id,
+                ...data,
+                // Align in both formats so any parser resolves at local midnight
+                "Start date": normalizedStart || startStr,
+                "End date": normalizedEnd || endStr,
+                startDate: normalizedStart || startStr,
+                endDate: normalizedEnd || endStr,
+              });
             }
-            const matchDMY = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-            if (matchDMY) {
-              const d = new Date(parseInt(matchDMY[3], 10), parseInt(matchDMY[2], 10) - 1, parseInt(matchDMY[1], 10), 0, 0, 0, 0);
-              return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : "";
-            }
-            const parsed = new Date(trimmed);
-            if (!isNaN(parsed.getTime())) {
-              const d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
-              return d.toISOString().split('T')[0];
-            }
-            return "";
-          };
-
-          if (startStr) normalizedStart = parseToLocalMidnightString(startStr);
-          if (endStr) normalizedEnd = parseToLocalMidnightString(endStr);
-
-          list.push({
-            id: docSnap.id,
-            ...data,
-            // Align in both formats so any parser resolves at local midnight
-            "Start date": normalizedStart || startStr,
-            "End date": normalizedEnd || endStr,
-            startDate: normalizedStart || startStr,
-            endDate: normalizedEnd || endStr,
           });
-        }
-      });
-      setCalendarOrders(list);
-    }, (err) => {
-      console.error("Error subscribing to calendar orders collection:", err);
+          setCalendarOrders(list);
+        }, (err) => {
+          console.error("Error subscribing to calendar orders collection:", err);
+        });
+      } else {
+        setCalendarOrders([]);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
   }, [selectedAssetUnit]);
 
   // Synchronize category first option for Addons mode dropdown selection
@@ -450,118 +490,193 @@ export function AdminDashboard() {
     const isAdminAuthenticated = localStorage.getItem("isAdminAuthenticated") === "true";
     if (!isAdminAuthenticated) {
       navigate("/admin");
-    } else {
-      const storedEmail = localStorage.getItem("adminEmail") || "afterhoursrental@gmail.com";
-      setCurrentUser({
-        email: storedEmail,
-        displayName: storedEmail === "afterhoursrental@gmail.com" ? "After Hours Rental Admin" : "Arjun Tiwari"
-      });
+      setAuthLoading(false);
+      return;
     }
-    setAuthLoading(false);
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser({
+          email: user.email,
+          displayName: user.displayName || (user.email === "afterhoursrental@gmail.com" ? "After Hours Rental Admin" : "Arjun Tiwari")
+        });
+      } else {
+        const storedEmail = localStorage.getItem("adminEmail") || "afterhoursrental@gmail.com";
+        setCurrentUser({
+          email: storedEmail,
+          displayName: storedEmail === "afterhoursrental@gmail.com" ? "After Hours Rental Admin" : "Arjun Tiwari"
+        });
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribeAuth();
   }, [navigate]);
 
-  // Fetch orders in real-time
+  // Fetch orders in real-time with Auth wrapping
   useEffect(() => {
-    const ordersRef = collection(db, "orders");
+    let unsubscribe: (() => void) | null = null;
 
-    const extractOrderIdNumber = (idStr: string): number => {
-      if (!idStr) return 0;
-      const matches = idStr.match(/\d+/g);
-      if (matches && matches.length > 0) {
-        return parseInt(matches[matches.length - 1], 10);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
       }
-      return 0;
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const ordersRef = collection(db, "orders");
+
+        const extractOrderIdNumber = (idStr: string): number => {
+          if (!idStr) return 0;
+          const matches = idStr.match(/\d+/g);
+          if (matches && matches.length > 0) {
+            return parseInt(matches[matches.length - 1], 10);
+          }
+          return 0;
+        };
+
+        unsubscribe = onSnapshot(ordersRef, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
+          });
+          // Sort strictly by Order ID number in descending order
+          list.sort((a, b) => {
+            const idA = String(a["Order ID"] || a.id || "");
+            const idB = String(b["Order ID"] || b.id || "");
+            const numA = extractOrderIdNumber(idA);
+            const numB = extractOrderIdNumber(idB);
+            if (numA !== numB) {
+              return numB - numA;
+            }
+            return idB.localeCompare(idA);
+          });
+          setOrders(list);
+        }, (err) => {
+          console.error("Error subscribing to orders collection:", err);
+        });
+      } else {
+        setOrders([]);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
     };
-
-    const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      // Sort strictly by Order ID number in descending order
-      list.sort((a, b) => {
-        const idA = String(a["Order ID"] || a.id || "");
-        const idB = String(b["Order ID"] || b.id || "");
-        const numA = extractOrderIdNumber(idA);
-        const numB = extractOrderIdNumber(idB);
-        if (numA !== numB) {
-          return numB - numA;
-        }
-        return idB.localeCompare(idA);
-      });
-      setOrders(list);
-    }, (err) => {
-      console.error("Error subscribing to orders collection:", err);
-    });
-    return () => unsubscribe();
   }, []);
 
-  // Fetch waitlist entries in real-time
+
+
+  // Fetch active slides in real-time with Auth wrapping
   useEffect(() => {
-    const waitlistRef = collection(db, "inventory_waitlist");
-    const unsubscribe = onSnapshot(waitlistRef, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      // Sort by Requested Date (planDate) so admin can see heavy request periods
-      list.sort((a, b) => {
-        const dateA = a.planDate ? new Date(a.planDate).getTime() : 0;
-        const dateB = b.planDate ? new Date(b.planDate).getTime() : 0;
-        return dateA - dateB;
-      });
-      setWaitlistItems(list);
-    }, (err) => {
-      console.error("Error subscribing to waitlist collection:", err);
+    let unsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const slidesRef = collection(db, "homepage_slides");
+        const q = query(slidesRef, orderBy("createdAt", "desc"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
+          });
+          setActiveSlides(list);
+        }, (err) => {
+          console.error("Error subscribing to homepage slides:", err);
+          handleFirestoreError(err, OperationType.LIST, "homepage_slides");
+        });
+      } else {
+        setActiveSlides([]);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
-  // Fetch active slides in real-time
+  // Fetch premium games in real-time with Auth wrapping
   useEffect(() => {
-    const slidesRef = collection(db, "homepage_slides");
-    const q = query(slidesRef, orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      setActiveSlides(list);
-    }, (err) => {
-      console.error("Error subscribing to homepage slides:", err);
+    let unsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const gamesRef = collection(db, "premium_games");
+        const q = query(gamesRef, orderBy("createdAt", "desc"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
+          });
+          setPremiumGames(list);
+        }, (err) => {
+          console.error("Error subscribing to premium games:", err);
+        });
+      } else {
+        setPremiumGames([]);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
-  // Fetch premium games in real-time
+  // Fetch gear catalog dynamically in real-time with Auth wrapping
   useEffect(() => {
-    const gamesRef = collection(db, "premium_games");
-    const q = query(gamesRef, orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      setPremiumGames(list);
-    }, (err) => {
-      console.error("Error subscribing to premium games:", err);
-    });
-    return () => unsubscribe();
-  }, []);
+    let unsubscribe: (() => void) | null = null;
 
-  // Fetch gear catalog dynamically in real-time
-  useEffect(() => {
-    const q = query(collection(db, "gear_catalog"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      setGearCatalogList(list);
-    }, (err) => {
-      console.error("Error subscribing to gear catalog collection:", err);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const q = query(collection(db, "gear_catalog"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
+          });
+          setGearCatalogList(list);
+        }, (err) => {
+          console.error("Error subscribing to gear catalog collection:", err);
+        });
+      } else {
+        setGearCatalogList([]);
+      }
     });
-    return () => unsubscribe();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
   }, []);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -1763,20 +1878,7 @@ export function AdminDashboard() {
     }
   };
 
-  const waitlistGrouped = useMemo(() => {
-    const groups: { [key: string]: any[] } = {};
-    waitlistItems.forEach((sub) => {
-      const dateStr = sub.planDate || "No Requested Date";
-      if (!groups[dateStr]) {
-        groups[dateStr] = [];
-      }
-      groups[dateStr].push(sub);
-    });
-    return Object.keys(groups).sort().map((date) => ({
-      date,
-      items: groups[date]
-    }));
-  }, [waitlistItems]);
+
 
   if (authLoading) {
     return (
@@ -1792,70 +1894,69 @@ export function AdminDashboard() {
   }
 
   return (
-    <div id="admin-dashboard-view" className="min-h-screen bg-afterhours-black pt-28 pb-20 px-6 relative">
-      {/* Background radial soft light */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-afterhours-purple/5 rounded-full blur-[120px] pointer-events-none" />
+    <div id="admin-dashboard-view" className="min-h-screen bg-slate-50 pt-28 pb-20 px-6 relative text-slate-800">
       
       <div className={`mx-auto space-y-16 transition-all duration-300 ${
         activeTab === "content" ? "max-w-4xl" : "max-w-7xl w-full"
       }`}>
         
         {/* Dashboard Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-slate-200 pb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-afterhours-green animate-pulse" />
-              <span className="text-[10px] uppercase font-bold tracking-[0.4em] text-white/40 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] uppercase font-bold tracking-[0.4em] text-slate-500 font-mono">
                 Operator: {currentUser?.email}
               </span>
             </div>
-            <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+            <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[#003791]">
               System Admin Hub
             </h1>
           </div>
           
-          <button
-            id="admin-logout-btn"
-            onClick={handleLogOut}
-            className="flex items-center gap-2 text-xs uppercase font-bold tracking-widest text-white/60 hover:text-afterhours-pink bg-white/5 hover:bg-afterhours-pink/15 px-4 py-2.5 rounded-xl border border-white/5 hover:border-afterhours-pink/30 cursor-pointer transition-all self-start sm:self-auto"
-          >
-            <LogOut size={14} />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+            <button
+              id="test-partner-login-btn"
+              onClick={() => navigate("/partner-login")}
+              className="flex items-center gap-2 text-xs uppercase font-bold tracking-widest text-[#003791] hover:text-white bg-white border border-[#003791]/30 hover:bg-[#003791] px-4 py-2.5 rounded-xl cursor-pointer transition-all shadow-2xs"
+            >
+              <Shield size={14} className="text-[#003791] hover:text-white" />
+              <span>Test Partner Login</span>
+            </button>
+
+            <button
+              id="admin-logout-btn"
+              onClick={handleLogOut}
+              className="flex items-center gap-2 text-xs uppercase font-bold tracking-widest text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 px-4 py-2.5 rounded-xl border border-slate-200 hover:border-rose-200 cursor-pointer transition-all shadow-2xs"
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-white/5 pb-2 gap-2 md:gap-4 overflow-x-auto select-none no-scrollbar">
+        <div className="flex border-b border-slate-200 pb-2 gap-2 md:gap-4 overflow-x-auto select-none no-scrollbar">
           <button
             onClick={() => setActiveTab("orders")}
             className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
               activeTab === "orders"
-                ? "bg-gradient-to-r from-afterhours-cyan/15 to-afterhours-purple/15 border-afterhours-cyan/60 text-afterhours-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)]"
-                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
             }`}
           >
             <ShoppingBag size={13} />
             <span>Excel Order Matrix</span>
           </button>
           
-          <button
-            onClick={() => setActiveTab("waitlist")}
-            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "waitlist"
-                ? "bg-gradient-to-r from-afterhours-pink/15 to-afterhours-purple/15 border-afterhours-pink/60 text-afterhours-pink shadow-[0_0_15px_rgba(236,72,153,0.1)]"
-                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
-            }`}
-          >
-            <BellRing size={13} />
-            <span>Waitlist & Demand</span>
-          </button>
+
 
           <button
             onClick={() => setActiveTab("content")}
             className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
               activeTab === "content"
-                ? "bg-white/5 border-afterhours-purple/60 text-afterhours-purple shadow-[0_0_15px_rgba(168,85,247,0.1)]"
-                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
             }`}
           >
             <Sliders size={13} />
@@ -1866,8 +1967,8 @@ export function AdminDashboard() {
             onClick={() => setActiveTab("calendar")}
             className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
               activeTab === "calendar"
-                ? "bg-gradient-to-r from-afterhours-green/15 to-afterhours-purple/15 border-afterhours-green/60 text-afterhours-green shadow-[0_0_15px_rgba(34,197,94,0.1)]"
-                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
             }`}
           >
             <Calendar size={13} />
@@ -1878,12 +1979,36 @@ export function AdminDashboard() {
             onClick={() => setActiveTab("vault")}
             className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
               activeTab === "vault"
-                ? "bg-gradient-to-r from-afterhours-cyan/15 to-afterhours-purple/15 border-afterhours-cyan/60 text-afterhours-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)]"
-                : "bg-black/40 border-white/5 text-white/40 hover:text-white/70 hover:border-white/10"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
             }`}
           >
-            <Sliders size={13} className="text-afterhours-cyan" />
+            <Sliders size={13} />
             <span>Inventory Vault</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("fleet")}
+            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "fleet"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
+            }`}
+          >
+            <Layers size={13} />
+            <span>Fleet Management</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("onboarding")}
+            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "onboarding"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
+            }`}
+          >
+            <User size={13} />
+            <span>Onboard Partner</span>
           </button>
         </div>
 
@@ -2129,10 +2254,10 @@ export function AdminDashboard() {
                 </button>
               </div>
 
-              <div className="w-full overflow-x-auto bg-[#0a0a0c]/80 border border-white/5 rounded-3xl p-1 shadow-2xl relative">
+              <div className="w-full overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-white/5 bg-white/[0.02]">
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Order Id</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Date</th>
                       <th className="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-white/50 whitespace-nowrap">Client Name</th>
@@ -2380,80 +2505,7 @@ export function AdminDashboard() {
           );
         })()}
 
-        {/* TAB 2: DEMAND INTELLIGENCE HUB */}
-        {activeTab === "waitlist" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-afterhours-pink/10 border border-afterhours-pink/25 p-2.5 rounded-xl text-afterhours-pink">
-                  <BellRing size={18} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase italic text-white">Waitlist & Demand</h2>
-                  <p className="text-[10px] uppercase tracking-wider text-white/40 font-mono">Watch out-of-stock item subscriptions sorted by requested target date</p>
-                </div>
-              </div>
-              <div className="text-[10px] font-mono text-white/45 bg-[#121215] border border-white/5 rounded-full px-3 py-1.5 self-start sm:self-auto uppercase tracking-wider">
-                Total Subscribers: <strong className="text-afterhours-pink font-bold">{waitlistItems.length}</strong>
-              </div>
-            </div>
 
-            {waitlistGrouped.length === 0 ? (
-              <div className="text-center py-20 bg-[#0a0a0c]/80 border border-white/5 rounded-3xl p-8 shadow-2xl">
-                <p className="text-xs font-mono text-white/30">
-                  No priority queue registrations logged in the inventory_waitlist collection.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {waitlistGrouped.map(({ date, items }) => (
-                  <div key={date} className="relative p-6 rounded-3xl bg-neutral-900/40 border border-white/5 hover:border-white/10 transition-all space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-afterhours-pink animate-pulse" />
-                        <h3 className="text-xs uppercase font-black tracking-[0.2em] text-white">
-                          Requested Date: <span className="text-afterhours-pink font-mono">{date}</span>
-                        </h3>
-                      </div>
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-afterhours-pink/10 border border-afterhours-pink/20 px-2.5 py-0.5 rounded-full text-afterhours-pink">
-                        {items.length} {items.length === 1 ? "priority alert" : "priority alerts"}
-                      </span>
-                    </div>
-
-                    <div className="w-full overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-white/5 text-[9px] uppercase tracking-wider text-white/40">
-                            <th className="pb-2">Target gear</th>
-                            <th className="pb-2">Gear code</th>
-                            <th className="pb-2">Contact Link</th>
-                            <th className="pb-2 font-mono">Subscriber name</th>
-                            <th className="pb-2 text-right">Registration time</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5 text-xs text-white/80 font-mono">
-                          {items.map((sub, idx) => (
-                            <tr key={sub.id || idx} className="hover:bg-white/[0.01] transition-all">
-                              <td className="py-3 font-sans font-black text-white uppercase">{sub.itemName}</td>
-                              <td className="py-3 text-[10px] text-white/40">{sub.itemId}</td>
-                              <td className="py-3 text-afterhours-cyan font-bold">{sub.contact}</td>
-                              <td className="py-3 font-sans font-bold uppercase text-white/90">{sub.name}</td>
-                              <td className="py-3 text-right text-[10px] text-white/30">
-                                {sub.createdAt?.seconds 
-                                  ? new Date(sub.createdAt.seconds * 1000).toLocaleString() 
-                                  : sub.createdAt ? new Date(sub.createdAt).toLocaleString() : "N/A"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* TAB 4: VISUAL AVAILABILITY CALENDAR */}
         {activeTab === "calendar" && (
@@ -4084,6 +4136,14 @@ export function AdminDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {activeTab === "fleet" && (
+          <FleetManagement />
+        )}
+
+        {activeTab === "onboarding" && (
+          <PartnerOnboarding />
         )}
 
       </div>

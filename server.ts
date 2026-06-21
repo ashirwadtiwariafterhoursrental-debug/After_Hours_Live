@@ -92,6 +92,14 @@ async function startServer() {
     });
   }
 
+  // Catch-all route for SPA fallback to be safe across environments in production
+  if (process.env.NODE_ENV === "production") {
+    app.get('*', (req, res) => {
+      const distPath = path.join(process.cwd(), 'dist');
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
