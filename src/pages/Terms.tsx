@@ -34,7 +34,7 @@ export function Terms() {
             Terms and Conditions
           </h1>
           <p className="mt-2 text-xs font-mono uppercase tracking-wider text-slate-500">
-            Last updated: May 2026 • Please read carefully before renting
+            Last updated: March 2026 • Please read carefully before renting
           </p>
         </div>
 
@@ -43,34 +43,36 @@ export function Terms() {
           <section id="section-1" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-black uppercase text-[#003791] font-display mb-3 flex items-center gap-2">
               <span className="text-xs font-mono text-[#003791]/50">01.</span>
-              Rental Contract
+              RENTAL CONTRACT & OWNERSHIP
             </h2>
-            <p className="text-slate-600">
-              By renting a product, the customer enters into a legally binding rental contract with After Hours Rental. Upon successful payment of the rental fee and completion of the verification process, After Hours Rental transfers the temporary usage rights of the product to the customer. Under no circumstances does this contract signify, imply, or transfer permanent ownership of the goods to you. All products (including consoles, controllers, projectors, and cables) remain the exclusive property of After Hours Rental and must be returned in the exact original condition and working order in which they were delivered, immediately upon completion of the rental duration agreed upon in your order.
+            <p className="text-slate-600 text-sm leading-relaxed">
+              By renting a product, the customer enters into a legally binding rental contract with After Hours Rental. Upon successful payment of the rental fee and completion of the mandatory KYC verification process, After Hours Rental transfers the temporary usage rights of the product to the customer. Under no circumstances does this contract signify, imply, or transfer permanent ownership of the goods to you.
+              <br /><br />
+              All products (including consoles, controllers, projectors, and cables) remain the exclusive property of After Hours Rental and its Invested Partners. The equipment must be returned in the exact original condition and working order in which it was delivered, immediately upon completion of the agreed rental duration. Failure to return the equipment is strictly classified as Criminal Breach of Trust and Cheating under the applicable sections of the Bharatiya Nyaya Sanhita (BNS). In the event of non-return, the customer explicitly authorizes After Hours Rental to contact the original manufacturers (e.g., Sony India) to issue a permanent MAC Address/Serial Number hardware ban, rendering the stolen device permanently inoperable.
             </p>
           </section>
 
           <section id="section-2" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-black uppercase text-[#003791] font-display mb-3 flex items-center gap-2">
               <span className="text-xs font-mono text-[#003791]/50">02.</span>
-              Tenure of Contract
+              TENURE OF CONTRACT & FINANCIAL LIABILITY
             </h2>
             <div className="space-y-3">
               <p className="text-slate-600">
-                The tenure of the contract is strictly equivalent to the rental duration chosen by the customer and confirmed at the time of booking. The return date and precise drop-off/pick-up times are fixed and imprinted on your booking confirmation and invoice. The product(s) must be returned in "as-is" condition by this exact deadline.
+                The tenure of the contract is strictly equivalent to the rental duration chosen by the customer and confirmed at the time of booking. The return date and precise drop-off/pick-up times are fixed and imprinted on your booking confirmation and invoice.
               </p>
               <div className="border-l-2 border-[#003791]/20 pl-4 space-y-2">
                 <p className="text-slate-600">
-                  <strong>Early Returns:</strong> In the event that you choose to return the product earlier than the end of your agreed tenure, there will be absolutely no refund, partial or full, of the rental amount collected from you.
+                  <strong>Early Returns:</strong> In the event that you choose to return the product earlier than the end of your agreed tenure, there will be absolutely no refund, partial or full, of the rental amount collected.
                 </p>
                 <p className="text-slate-600">
-                  <strong>Extensions:</strong> If you wish to extend the rental tenure, the request must be made prior to your original return deadline. Extensions are strictly subject to inventory availability and will be granted solely at the discretion of After Hours Rental.
+                  <strong>Extensions:</strong> If you wish to extend the rental tenure, the request must be made prior to your original return deadline. Extensions are strictly subject to inventory availability and are granted solely at the discretion of After Hours Rental.
                 </p>
               </div>
-              <p className="inline-flex gap-2 items-center text-xs font-mono bg-amber-50 border border-amber-200 text-amber-600 p-3 rounded-xl mt-2 w-full">
-                <span>⚠️</span>
+              <p className="inline-flex gap-2 items-start text-xs font-mono bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-xl mt-2 w-full leading-relaxed">
+                <span className="mt-0.5">⚠️</span>
                 <span>
-                  <strong>Important:</strong> The maximum standard rental tenure for any equipment is 30 days. Any unauthorized attempt to hold the equipment beyond the confirmed dates without explicit written extension approval will be treated as a serious violation of this contract. This will result in immediate penalty charges and may lead to legal recovery actions.
+                  <strong>Unauthorized Holds & Liability:</strong> The maximum standard rental tenure is 30 days. Any unauthorized attempt to hold the equipment beyond the confirmed dates without explicit written extension approval is a serious violation of this contract. In the event of an unauthorized hold, total loss, or theft, the customer instantly assumes full financial responsibility and is legally liable to pay the 100% Current Market Replacement Value (MRP) of the product, plus a daily penalty fee of ₹1,000 until the full asset or its equivalent cash value is recovered by the company.
                 </span>
               </p>
             </div>
@@ -191,25 +193,11 @@ export function Terms() {
           <section id="section-8" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-black uppercase text-[#003791] font-display mb-3 flex items-center gap-2">
               <span className="text-xs font-mono text-[#003791]/50">08.</span>
-              Verification Policy (KYC)
+              VERIFICATION POLICY (KYC & FRAUD PREVENTION)
             </h2>
             <div className="space-y-3">
               <p className="text-slate-600">
-                All customers must complete a mandatory verification process (KYC) before an order is confirmed and dispatched. This ensures the safety and security of our high-value inventory. After Hours Rental operates on a dual-track verification system:
-              </p>
-              <ul className="list-disc pl-5 space-y-2 text-slate-500">
-                <li>
-                  <strong>Track A: Corporate Verification (Zero Security Deposit):</strong> Customers who are working professionals can verify their employment using an official corporate email ID (e.g., name@company.com) alongside a valid Government ID. Successful corporate verification waives the security deposit requirement entirely.
-                </li>
-                <li>
-                  <strong>Track B: Standard Verification (Security Deposit Required):</strong> Customers booking with a personal email address must provide a valid Government ID (such as an Aadhaar card, Driving License, or Passport) along with a complete delivery address and Google Maps pin. A fully refundable security deposit will apply based on the specific equipment tier rented.
-                </li>
-                <li>
-                  <strong>Student Rentals:</strong> Students must provide a valid Student ID Card alongside a standard Government ID. For high-value gaming setups, After Hours Rental reserves the right to request additional verification from a parent or guardian.
-                </li>
-              </ul>
-              <p className="text-slate-600">
-                <strong>Approval & Cancellation:</strong> The order is only confirmed once the KYC documents are approved by our operations team. If the verification is incomplete, mismatched, or deemed unsatisfactory, After Hours Rental reserves the right to cancel the order. In such an event, any booking advance paid will be fully refunded to the customer within 24 hours.
+                All customers must complete a mandatory verification process (KYC) before an order is confirmed and dispatched. This ensures the safety and security of our high-value inventory. The customer agrees to provide valid, government-issued identification (Aadhaar Card, PAN Card, or Passport) and a live photograph prior to the delivery of any hardware. The customer explicitly consents to After Hours Rental verifying these documents through third-party APIs. Providing forged, altered, or third-party identification documents constitutes immediate criminal fraud. After Hours Rental reserves the right to withhold delivery, confiscate any booking advance, and initiate legal action if fraudulent documents are detected.
               </p>
             </div>
           </section>
@@ -271,20 +259,23 @@ export function Terms() {
           <section id="section-12" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-black uppercase text-[#003791] font-display mb-3 flex items-center gap-2">
               <span className="text-xs font-mono text-[#003791]/50">12.</span>
-              Governing Law, Jurisdiction and Dispute Resolution
+              GOVERNING LAW, JURISDICTION AND DISPUTE RESOLUTION
             </h2>
-            <div className="space-y-3">
-              <p className="text-slate-600">
-                These Terms and the use of our services are governed by and construed strictly in accordance with the laws of India.
+            <div className="space-y-4">
+              <p className="text-slate-600 text-sm leading-relaxed">
+                <strong>12.1 Governing Law:</strong> These Terms and the use of the After Hours Rental platform and services are governed by and construed strictly in accordance with the laws of India.
               </p>
-              <p className="text-slate-600">
-                <strong>Amicable Settlement:</strong> In the event any dispute or difference arises between the Customer and After Hours Rental in connection with the validity, interpretation, termination, or alleged breach of any provision of these Terms, both parties shall endeavor to settle such dispute amicably within a period of 14 days.
+              <p className="text-slate-600 text-sm leading-relaxed">
+                <strong>12.2 Amicable Settlement:</strong> In the event any dispute or difference arises between the Customer and After Hours Rental in connection with the validity, interpretation, termination, or alleged breach of any provision of these Terms (“Dispute”), both parties shall endeavor to settle such dispute amicably within a period of 14 days.
               </p>
-              <p className="text-slate-600">
-                <strong>Arbitration:</strong> Upon failure to amicably settle any dispute, it shall be resolved by arbitration in accordance with the Arbitration and Conciliation Act, 1996. The dispute shall be resolved by arbitration, administered by an independent online dispute resolution (ODR) institution (such as Presolv360 or similar), in accordance with its Dispute Resolution Rules.
+              <p className="text-slate-600 text-sm leading-relaxed">
+                <strong>12.3 Online Dispute Resolution (ODR):</strong> Upon failure to amicably settle any Dispute, it shall be resolved by arbitration in accordance with the Arbitration and Conciliation Act, 1996. The Dispute shall be resolved by a sole arbitrator and administered by Presolv360, an independent institution, in accordance with its Dispute Resolution Rules.
               </p>
-              <p className="text-slate-600">
-                <strong>Jurisdiction:</strong> The juridical seat of arbitration shall be New Delhi, India. The language of the arbitration shall be English. Subject to the arbitration clause, the competent courts of New Delhi, India shall have the sole and exclusive jurisdiction in respect of any matters which may be instituted before any court of law arising from the services offered by After Hours Rental.
+              <p className="text-slate-600 text-sm leading-relaxed">
+                <strong>12.4 Virtual Proceedings:</strong> The parties explicitly agree to carry out the arbitration proceedings virtually through the online dispute resolution (“ODR”) platform of Presolv360. For such purpose, the email addresses and mobile numbers provided by the Customer during the KYC/booking process shall be considered the official legal channels for all notices and summons. The decision of the arbitrator shall be final and binding on both parties.
+              </p>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                <strong>12.5 Jurisdiction:</strong> The juridical seat of arbitration shall be New Delhi, India. The language of the arbitration shall be English. Subject to the arbitration clause above, the competent courts of New Delhi, India shall have the sole and exclusive jurisdiction in respect of any criminal or civil matters (including breach of trust or asset recovery) instituted before any court of law arising from the services offered by After Hours Rental.
               </p>
             </div>
           </section>
