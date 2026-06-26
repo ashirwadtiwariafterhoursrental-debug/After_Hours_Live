@@ -10,7 +10,7 @@ import { fixedPriceCodes } from "../lib/fixedPriceCodes";
 import { db, storage, auth, handleFirestoreError, OperationType } from "../firebase";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, doc, runTransaction, setDoc, getDocs, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, runTransaction, setDoc, getDocs, getDoc, updateDoc } from "firebase/firestore";
 import { useAvailability } from "../hooks/useAvailability";
 
 interface CheckoutItem {
@@ -44,6 +44,7 @@ export function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [confirmedOrderId, setConfirmedOrderId] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
   const [assignedUnits, setAssignedUnits] = useState<string[]>([]);
@@ -533,6 +534,8 @@ export function Checkout() {
         newOrderId = Math.floor(Math.random() * 9000) + 1000;
       }
 
+      setConfirmedOrderId(`Order-${newOrderId}`);
+
       const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
       const totalPaidStr = `₹${amountToPay}`;
       const discountStr = `₹${discount || 0}`;
@@ -558,7 +561,8 @@ export function Checkout() {
         "address": deliveryLocation || "Test Location Link",
         "assignedUnits": assigned,
         "assignedUnit": assigned[0] || "",
-        "payStatus": "Testing / Bypassed"
+        "payStatus": "Testing / Bypassed",
+        "deliveryStatus": "Pending Details"
       };
 
       await setDoc(doc(db, "orders", `Order-${newOrderId}`), testPayload);
@@ -605,7 +609,7 @@ export function Checkout() {
           ? `Custom Reserve Deposit (Approved Code: ${checkoutSpecialCode})`
           : `Pay In Full - VIP Premium Package (${selectedVipPerk === "controller" ? "Extra Premium Controller" : "Premium Game Add-on"})`,
       image: "https://images.unsplash.com/photo-1612287230202-1bf1d85d1bdf?auto=format&fit=crop&q=80&w=150&h=150", 
-      handler: function (response: any) {
+      handler: async function (response: any) {
         setIsProcessing(false);
         setPaymentSuccess(true);
         setPaymentDetails({
@@ -617,6 +621,83 @@ export function Checkout() {
         });
         // Clear cart after successful transaction
         localStorage.removeItem("afterhours_checkout_data");
+
+        let newOrderId = 1004;
+        try {
+          await runTransaction(db, async (transaction) => {
+            const counterRef = doc(db, "metadata", "orderCounter");
+            const counterDoc = await transaction.get(counterRef);
+            if (!counterDoc.exists()) {
+              newOrderId = 1004;
+              transaction.set(counterRef, { lastOrderId: 1004 });
+            } else {
+              const currentLastId = counterDoc.data().lastOrderId;
+              newOrderId = (currentLastId ? Number(currentLastId) : 1003) + 1;
+              transaction.update(counterRef, { lastOrderId: newOrderId });
+            }
+          });
+        } catch (transactionErr) {
+          console.error("Order counter transaction failed, defaulting:", transactionErr);
+          newOrderId = Math.floor(Math.random() * 9000) + 1000;
+        }
+
+        setConfirmedOrderId(`Order-${newOrderId}`);
+
+        const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
+        const totalPaidStr = `₹${amountToPay}`;
+        const discountStr = `₹${discount || 0}`;
+        const remainingAmtVal = Math.max(0, finalTotal - amountToPay);
+        const remainingAmtStr = `₹${remainingAmtVal}`;
+
+        const payload = {
+          "Order ID": `Order-${newOrderId}`,
+          "Order Date": new Date().toISOString(),
+          "Name": deliveryName || name || "Customer",
+          "Contact number": deliveryPhone || phone || "9999999999",
+          "Email id": deliveryEmail || "customer@afterhours.com",
+          "Assets": bookingItemsStr,
+          "Addon": paymentOption === "full" ? selectedVipPerk : "none",
+          "Paid amt": totalPaidStr,
+          "Start date": startDate || "",
+          "End date": endDate || "",
+          "Remaining amt": remainingAmtStr,
+          "Discount applied": discountStr,
+          "KYC Document URL": "",
+          "location": deliveryLocation || "",
+          "locationLink": deliveryLocation || "",
+          "address": deliveryLocation || "",
+          "assignedUnits": assigned,
+          "assignedUnit": assigned[0] || "",
+          "payStatus": "Paid",
+          "deliveryStatus": "Pending Details"
+        };
+
+        await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);
+
+        try {
+          const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || "https://api.afterhours.com/v1/order-webhook";
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              orderId: `Order-${newOrderId}`,
+              clientName: deliveryName || name || "Customer",
+              phoneNumber: deliveryPhone || phone || "9999999999",
+              itemRented: bookingItemsStr,
+              startDate: startDate || "",
+              endDate: endDate || "",
+              totalRevenue: `₹${finalTotal}`,
+              tokenPaid: totalPaidStr,
+              toCollect: remainingAmtStr,
+              assignedUnits: assigned,
+              location: deliveryLocation || ""
+            })
+          });
+        } catch (webhookErr) {
+          console.warn("Outbound webhook notify failed (silently caught):", webhookErr);
+        }
       },
       prefill: {
         name: name || "Customer",
@@ -795,99 +876,29 @@ Here are my remaining details for delivery:
     }
 
     setIsSyncingDelivery(true);
-    if (!isCartStillAvailable) {
-      setIsSyncingDelivery(false);
-      setDeliveryError("This setup is currently fully deployed during these dates. Please select alternative dates.");
-      return;
-    }
     try {
-      // Final re-verification of date block allocation
-      const assigned = await checkInventoryAvailability();
-
-      // 1. Generate/retrieve the sequential Order ID via transition on metadata/orderCounter
-      let newOrderId = 1004;
-      try {
-        await runTransaction(db, async (transaction) => {
-          const counterRef = doc(db, "metadata", "orderCounter");
-          const counterDoc = await transaction.get(counterRef);
-          if (!counterDoc.exists()) {
-            newOrderId = 1004;
-            transaction.set(counterRef, { lastOrderId: 1004 });
-          } else {
-            const currentLastId = counterDoc.data().lastOrderId;
-            newOrderId = (currentLastId ? Number(currentLastId) : 1003) + 1;
-            transaction.update(counterRef, { lastOrderId: newOrderId });
-          }
-        });
-      } catch (transactionErr: any) {
-        console.error("Order counter transaction failed:", transactionErr);
-        throw transactionErr;
-      }
-
-      // 2. Upload KYC file to Firebase Storage with Order ID-based custom naming
+      // 1. Upload KYC file to Firebase Storage with Order ID-based custom naming
       let fileUrl = "";
       if (selectedFile) {
-        const storagePath = `kyc_uploads/Order-${newOrderId}-KYC`;
+        const storagePath = `kyc_uploads/${confirmedOrderId}-KYC`;
         const storageRef = ref(storage, storagePath);
         const uploadResult = await uploadBytes(storageRef, selectedFile);
         fileUrl = await getDownloadURL(uploadResult.ref);
       }
 
-      // 3. Save strict required keys to custom document ID 'Order-${newOrderId}' in orders collection
-      const bookingItemsStr = cart.map(item => `${item.name} (x${item.quantity})`).join(", ");
-      const totalPaidStr = `₹${paymentDetails?.amountPaid || calculatePaymentAmount()}`;
-      const discountStr = `₹${discount || 0}`;
-      const remainingAmtVal = Math.max(0, finalTotal - (paymentDetails?.amountPaid || calculatePaymentAmount()));
-      const remainingAmtStr = `₹${remainingAmtVal}`;
-
-      const payload = {
-        "Order ID": `Order-${newOrderId}`,
-        "Order Date": new Date().toISOString(),
+      // 2. Update existing order document using updateDoc
+      const updatePayload = {
         "Name": deliveryName,
         "Contact number": deliveryPhone,
         "Email id": deliveryEmail,
-        "Assets": bookingItemsStr,
-        "Addon": paymentOption === "full" ? selectedVipPerk : "none",
-        "Paid amt": totalPaidStr,
-        "Start date": startDate || "",
-        "End date": endDate || "",
-        "Remaining amt": remainingAmtStr,
-        "Discount applied": discountStr,
         "KYC Document URL": fileUrl,
         "location": deliveryLocation,
         "locationLink": deliveryLocation,
         "address": deliveryLocation,
-        "assignedUnits": assigned,
-        "assignedUnit": assigned[0] || ""
+        "deliveryStatus": "Details Submitted"
       };
 
-      await setDoc(doc(db, "orders", `Order-${newOrderId}`), payload);
-
-      // --- OUTBOUND WEBHOOK NOTIFICATION (Task 5) ---
-      try {
-        const webhookUrl = import.meta.env.VITE_WEBHOOK_URL || "https://api.afterhours.com/v1/order-webhook";
-        await fetch(webhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            orderId: `Order-${newOrderId}`,
-            clientName: deliveryName,
-            phoneNumber: deliveryPhone,
-            itemRented: bookingItemsStr,
-            startDate: startDate || "",
-            endDate: endDate || "",
-            totalRevenue: `₹${finalTotal}`,
-            tokenPaid: totalPaidStr,
-            toCollect: remainingAmtStr,
-            assignedUnits: assigned,
-            location: deliveryLocation
-          })
-        });
-      } catch (webhookErr) {
-        console.warn("Outbound webhook notify failed (silently caught):", webhookErr);
-      }
+      await updateDoc(doc(db, "orders", confirmedOrderId), updatePayload);
 
       setDeliverySynced(true);
     } catch (err: any) {
