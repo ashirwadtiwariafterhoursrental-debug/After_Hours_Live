@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Cookie, Shield, X } from "lucide-react";
 
+declare global {
+  interface Window {
+    gtag?: any;
+    dataLayer?: any;
+  }
+}
+
 export function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -14,11 +21,29 @@ export function CookieBanner() {
         setIsVisible(true);
       }, 1200);
       return () => clearTimeout(timer);
+    } else if (consent === "all" && typeof window !== "undefined" && typeof window.gtag === "function") {
+      // Restore consent state on page load for returning users
+      window.gtag('consent', 'update', {
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted',
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted'
+      });
     }
   }, []);
 
   const handleConsent = (type: "all" | "necessary") => {
     localStorage.setItem("afterhours_cookie_consent", type);
+    
+    if (type === "all" && typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag('consent', 'update', {
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted',
+        'ad_storage': 'granted',
+        'analytics_storage': 'granted'
+      });
+    }
+    
     setIsVisible(false);
   };
 
