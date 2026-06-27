@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Navbar } from "./components/layout/Navbar";
 import { Footer } from "./components/layout/Footer";
 import { ChatSupport } from "./components/ChatSupport";
+import { CookieBanner } from "./components/CookieBanner";
 import { Home } from "./pages/Home";
 import { Experiences } from "./pages/Experiences";
 import { Rentals } from "./pages/Rentals";
@@ -34,6 +35,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-blue-100 selection:text-[#003791]">
         <Navbar />
         <ChatSupport />
+        <CookieBanner />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/experiences" element={<Experiences />} />
