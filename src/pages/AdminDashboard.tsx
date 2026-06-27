@@ -108,10 +108,14 @@ export function AdminDashboard() {
   ];
 
   // Route protection, layout tabs, & operational states
-  const [activeTab, setActiveTab] = useState<"orders" | "content" | "calendar" | "vault" | "fleet" | "onboarding">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "content" | "calendar" | "vault" | "fleet" | "onboarding" | "leads">("orders");
   const [orders, setOrders] = useState<any[]>([]);
   const [kycModalUrl, setKycModalUrl] = useState<string | null>(null);
   const [updatingOrderStatusId, setUpdatingOrderStatusId] = useState<string | null>(null);
+
+  // --- Ad Leads States ---
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
 
   // --- Extension Engine States (Booking Extension Modal) ---
   const [extendingOrder, setExtendingOrder] = useState<any | null>(null);
@@ -679,6 +683,49 @@ export function AdminDashboard() {
     };
   }, []);
 
+  // Fetch leads in real-time when leads tab is active
+  useEffect(() => {
+    if (activeTab !== "leads") return;
+
+    setLeadsLoading(true);
+    let unsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      const isAdmin = localStorage.getItem("isAdminAuthenticated") === "true";
+      const isAuthAdmin = user && (user.email === "afterhoursrental@gmail.com" || user.email === "arjuntiwari8604@gmail.com");
+
+      if (user && (isAdmin || isAuthAdmin)) {
+        const leadsRef = collection(db, "leads");
+        const q = query(leadsRef, orderBy("createdAt", "desc"));
+
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const list: any[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          setLeads(list);
+          setLeadsLoading(false);
+        }, (err) => {
+          console.error("Error subscribing to leads collection:", err);
+          setLeadsLoading(false);
+        });
+      } else {
+        setLeads([]);
+        setLeadsLoading(false);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribeAuth();
+    };
+  }, [activeTab]);
+
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1099,6 +1146,55 @@ export function AdminDashboard() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
     XLSX.writeFile(workbook, "AfterHours_Orders.xlsx");
+  };
+
+  const handleExportLeadsCSV = () => {
+    if (leads.length === 0) {
+      alert("No leads to export.");
+      return;
+    }
+    const formattedLeads = leads.map(lead => ({
+      "Name": lead.fullName || lead.FullName || "",
+      "WhatsApp": lead.whatsappNumber || lead.WhatsApp || "",
+      "Event Date": lead.eventDate || lead.EventDate || "",
+      "Event Type": lead.eventType || lead.EventType || "",
+      "Status": lead.status || lead.Status || "New Lead",
+      "Created At": lead.createdAt ? new Date(lead.createdAt).toLocaleString() : ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(formattedLeads);
+    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "AfterHours_Ad_Leads.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    if (window.confirm("Are you sure you want to delete this lead? This action is irreversible.")) {
+      try {
+        await deleteDoc(doc(db, "leads", leadId));
+      } catch (err: any) {
+        console.error("Failed to delete lead:", err);
+        alert("Failed to delete lead: " + err.message);
+      }
+    }
+  };
+
+  const handleLeadStatusUpdate = async (leadId: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, "leads", leadId), {
+        status: newStatus
+      });
+    } catch (err: any) {
+      console.error("Failed to update status for lead:", leadId, err);
+      alert("Failed to update status: " + err.message);
+    }
   };
 
   const daysInMonth = useMemo(() => {
@@ -2009,6 +2105,18 @@ export function AdminDashboard() {
           >
             <User size={13} />
             <span>Onboard Partner</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("leads")}
+            className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all cursor-pointer border flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "leads"
+                ? "bg-[#003791] text-white border-[#003791] shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:text-[#003791] hover:bg-slate-100 shadow-sm"
+            }`}
+          >
+            <BellRing size={13} />
+            <span>Ad Leads</span>
           </button>
         </div>
 
@@ -4144,6 +4252,133 @@ export function AdminDashboard() {
 
         {activeTab === "onboarding" && (
           <PartnerOnboarding />
+        )}
+
+        {activeTab === "leads" && (
+          <div className="space-y-6 animate-fadeIn font-sans">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#003791]/10 border border-[#003791]/25 p-2.5 rounded-xl text-[#003791]">
+                  <BellRing size={18} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase italic text-slate-800">Google Ads Leads Matrix</h2>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Real-time leads captured from custom VIP event requests</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 self-start sm:self-auto">
+                <div className="text-[10px] font-mono text-slate-600 bg-white border border-slate-200 rounded-full px-3 py-1.5 uppercase tracking-wider font-bold shadow-2xs">
+                  Total Leads: <strong className="text-[#003791] font-black">{leads.length}</strong>
+                </div>
+                <button
+                  onClick={handleExportLeadsCSV}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-[#003791] hover:bg-blue-800 text-white rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-900/10 active:scale-[0.98]"
+                  title="Export all leads to CSV"
+                >
+                  <FileText size={12} />
+                  Download Leads (CSV)
+                </button>
+              </div>
+            </div>
+
+            <div className="w-full overflow-x-auto bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden relative">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                    <th className="px-6 py-4 font-black whitespace-nowrap">Name</th>
+                    <th className="px-6 py-4 font-black whitespace-nowrap">WhatsApp Number</th>
+                    <th className="px-6 py-4 font-black whitespace-nowrap">Expected Event Date</th>
+                    <th className="px-6 py-4 font-black whitespace-nowrap">Event Type</th>
+                    <th className="px-6 py-4 font-black whitespace-nowrap">Status Badge</th>
+                    <th className="px-6 py-4 font-black whitespace-nowrap">Captured Time</th>
+                    <th className="px-6 py-4 font-black text-center whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {leadsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-24 text-xs font-mono text-slate-400">
+                        <div className="flex flex-col items-center gap-3">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#003791]" />
+                          <span className="uppercase tracking-widest font-black text-[10px]">Loading active leads...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : leads.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-24 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        No leads have been registered from the Google Ads campaigns yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    leads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-50/60 transition-all">
+                        {/* Name */}
+                        <td className="px-6 py-4 whitespace-nowrap font-bold text-slate-800">
+                          {lead.fullName || lead.FullName || "N/A"}
+                        </td>
+
+                        {/* WhatsApp Number */}
+                        <td className="px-6 py-4 whitespace-nowrap font-mono font-bold text-slate-600">
+                          {lead.whatsappNumber || lead.whatsapp || lead.WhatsApp || "N/A"}
+                        </td>
+
+                        {/* Event Date */}
+                        <td className="px-6 py-4 whitespace-nowrap font-mono font-semibold text-slate-600">
+                          {lead.eventDate || lead.EventDate || "N/A"}
+                        </td>
+
+                        {/* Event Type */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-[10px] uppercase font-bold text-slate-600 tracking-wider">
+                            {lead.eventType || lead.EventType || "Other"}
+                          </span>
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <select
+                            value={lead.status || lead.Status || "New Lead"}
+                            onChange={(e) => handleLeadStatusUpdate(lead.id, e.target.value)}
+                            className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border focus:outline-none cursor-pointer ${
+                              (lead.status || lead.Status || "New Lead") === "New Lead" 
+                                ? "border-blue-500/20 text-[#003791] bg-blue-50" 
+                                : (lead.status || lead.Status || "New Lead") === "Contacted"
+                                ? "border-cyan-500/20 text-cyan-600 bg-cyan-50"
+                                : (lead.status || lead.Status || "New Lead") === "Closed"
+                                ? "border-green-500/20 text-green-600 bg-green-50"
+                                : "border-slate-300 text-slate-500 bg-slate-50"
+                            }`}
+                          >
+                            <option value="New Lead">New Lead</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Lost">Lost</option>
+                          </select>
+                        </td>
+
+                        {/* Captured Time */}
+                        <td className="px-6 py-4 whitespace-nowrap font-mono text-[10px] text-slate-400">
+                          {lead.createdAt ? new Date(lead.createdAt).toLocaleString() : "N/A"}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                          <button
+                            onClick={() => handleDeleteLead(lead.id)}
+                            className="p-2 text-rose-500 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-rose-600 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center active:scale-[0.95]"
+                            title="Delete Lead"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
       </div>

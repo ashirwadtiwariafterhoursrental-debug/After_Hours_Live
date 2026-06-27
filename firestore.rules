@@ -13,6 +13,11 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Leads Collection MATCH
+    match /leads/{leadId} {
+      allow read, write: if true;
+    }
+
     // Orders Collection MATCH
     match /orders/{orderId} {
       allow read, write: if true;

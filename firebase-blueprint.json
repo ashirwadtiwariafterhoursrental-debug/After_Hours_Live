@@ -139,9 +139,27 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title"]
+    },
+    "lead": {
+      "title": "Lead",
+      "description": "Customer interest capture for Google Ads traffic",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "description": "Customer full name" },
+        "whatsappNumber": { "type": "string", "description": "Contact whatsapp phone number" },
+        "eventDate": { "type": "string", "format": "date", "description": "Scheduled date of event" },
+        "eventType": { "type": "string", "enum": ["Corporate Event", "House Party", "Birthday", "Other"], "description": "Type of event" },
+        "status": { "type": "string", "description": "Status of lead follow-up" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when lead was submitted" }
+      },
+      "required": ["fullName", "whatsappNumber", "eventDate", "eventType", "status", "createdAt"]
     }
   },
   "firestore": {
+    "leads/{leadId}": {
+      "schema": "lead",
+      "description": "Captured customer inquiries and leads"
+    },
     "blogs/{blogId}": {
       "schema": "blog",
       "description": "Collection of public blog posts"
